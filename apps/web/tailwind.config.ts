@@ -1,0 +1,16 @@
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  theme: {
+    extend: {
+      colors: {
+        purpleInk: "#2f145f",
+        purpleGlow: "#8b5cf6"
+      }
+    }
+  },
+  plugins: []
+};
+
+export default config;
