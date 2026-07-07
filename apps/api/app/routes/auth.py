@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from flask import Blueprint, jsonify, request
+import jwt
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -98,6 +100,25 @@ def _public_user(user: User) -> dict[str, Any]:
     }
 
 
+def _create_access_token(user: User) -> str:
+    secret_key = current_app.config.get("JWT_SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError("JWT_SECRET_KEY must be configured.")
+
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(
+        seconds=current_app.config["JWT_ACCESS_TOKEN_EXPIRES_SECONDS"]
+    )
+    payload = {
+        "sub": str(user.id),
+        "user": _public_user(user),
+        "iat": now,
+        "exp": expires_at,
+    }
+
+    return jwt.encode(payload, secret_key, algorithm="HS256")
+
+
 @auth_bp.post("/register")
 def register():
     data, fields = _validate_registration_payload(request.get_json(silent=True))
@@ -156,4 +177,6 @@ def login():
             "Invalid email or password.",
         )
 
-    return jsonify({"user": _public_user(user)}), 200
+    return jsonify(
+        {"accessToken": _create_access_token(user), "user": _public_user(user)}
+    ), 200

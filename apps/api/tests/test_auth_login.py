@@ -1,5 +1,6 @@
 import unittest
 
+import jwt
 from werkzeug.security import generate_password_hash
 
 from app import create_app
@@ -11,6 +12,8 @@ class TestConfig:
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    JWT_SECRET_KEY = "test-jwt-secret"
+    JWT_ACCESS_TOKEN_EXPIRES_SECONDS = 900
 
 
 class LoginEndpointTestCase(unittest.TestCase):
@@ -34,7 +37,7 @@ class LoginEndpointTestCase(unittest.TestCase):
             db.session.remove()
             db.drop_all()
 
-    def test_login_returns_public_user_for_valid_credentials(self):
+    def test_login_returns_access_token_and_public_user_for_valid_credentials(self):
         response = self.client.post(
             "/auth/login",
             json={
@@ -44,16 +47,27 @@ class LoginEndpointTestCase(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+        body = response.get_json()
         self.assertEqual(
-            response.get_json(),
+            body["user"],
             {
-                "user": {
-                    "id": 1,
-                    "name": "Ada Lovelace",
-                    "email": "ada@example.com",
-                }
+                "id": 1,
+                "name": "Ada Lovelace",
+                "email": "ada@example.com",
             },
         )
+        self.assertIsInstance(body["accessToken"], str)
+
+        payload = jwt.decode(
+            body["accessToken"],
+            TestConfig.JWT_SECRET_KEY,
+            algorithms=["HS256"],
+        )
+        self.assertEqual(payload["sub"], "1")
+        self.assertEqual(payload["user"], body["user"])
+        self.assertIn("iat", payload)
+        self.assertIn("exp", payload)
+        self.assertEqual(payload["exp"] - payload["iat"], 900)
 
     def test_login_rejects_invalid_fields(self):
         response = self.client.post(

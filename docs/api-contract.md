@@ -131,7 +131,7 @@ curl -X POST http://127.0.0.1:5000/auth/register \
 
 ### POST /auth/login
 
-Verifies a user's email and password. This endpoint does not return tokens, set cookies, or create refresh-token state yet.
+Verifies a user's email and password. On success, this endpoint returns a signed access-token JWT and the public user object. It does not set cookies or create refresh-token state.
 
 Request body:
 
@@ -151,6 +151,7 @@ Success response:
 
 ```json
 {
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": 1,
     "name": "Ada Lovelace",
@@ -158,6 +159,12 @@ Success response:
   }
 }
 ```
+
+Access token:
+
+- Signed with HS256 using backend config value `JWT_SECRET_KEY`.
+- Expires after `JWT_ACCESS_TOKEN_EXPIRES_SECONDS` seconds. The default is 900 seconds.
+- Includes `sub` as the user id string, `user` as the public user object, and standard `iat` and `exp` claims.
 
 Status code:
 
@@ -226,7 +233,7 @@ Current status:
 
 - `POST /auth/register` is implemented.
 - `POST /auth/login` is implemented.
-- No JWT behavior is implemented.
+- Login returns an access-token JWT.
 - No refresh token or cookie behavior is implemented.
 
 ### Users

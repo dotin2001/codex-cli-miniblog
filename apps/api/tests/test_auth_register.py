@@ -47,6 +47,7 @@ class RegisterEndpointTestCase(unittest.TestCase):
                 }
             },
         )
+        self.assertNotIn("accessToken", response.get_json())
 
         with self.app.app_context():
             user = User.query.filter_by(email="ada@example.com").one()
