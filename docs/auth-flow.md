@@ -25,7 +25,24 @@ Login does not set cookies or create refresh-token state yet.
 
 Protected API routes must verify authentication before returning data.
 
-Future protected API routes should require the login access token as a bearer token and verify its signature and expiration before returning private data.
+Protected API routes require the login access token in the `Authorization` header:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+The backend verifies the token signature with `JWT_SECRET_KEY`, verifies token expiration, reads the user id from the `sub` claim, and loads the current user from the database.
+
+`GET /auth/me` returns the public user object for a valid bearer access token. Missing, malformed, invalid, expired, or unknown-user tokens return:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
 
 ## Logout
 

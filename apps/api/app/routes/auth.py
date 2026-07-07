@@ -119,6 +119,33 @@ def _create_access_token(user: User) -> str:
     return jwt.encode(payload, secret_key, algorithm="HS256")
 
 
+def _authentication_error():
+    return _error_response(
+        401,
+        "UNAUTHORIZED",
+        "A valid bearer token is required.",
+    )
+
+
+def _current_user_from_authorization_header() -> User | None:
+    authorization = request.headers.get("Authorization", "")
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+
+    secret_key = current_app.config.get("JWT_SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError("JWT_SECRET_KEY must be configured.")
+
+    try:
+        payload = jwt.decode(parts[1], secret_key, algorithms=["HS256"])
+        user_id = int(payload["sub"])
+    except (KeyError, TypeError, ValueError, jwt.InvalidTokenError):
+        return None
+
+    return db.session.get(User, user_id)
+
+
 @auth_bp.post("/register")
 def register():
     data, fields = _validate_registration_payload(request.get_json(silent=True))
@@ -180,3 +207,12 @@ def login():
     return jsonify(
         {"accessToken": _create_access_token(user), "user": _public_user(user)}
     ), 200
+
+
+@auth_bp.get("/me")
+def current_user():
+    user = _current_user_from_authorization_header()
+    if user is None:
+        return _authentication_error()
+
+    return jsonify({"user": _public_user(user)}), 200

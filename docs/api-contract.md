@@ -218,6 +218,62 @@ curl -X POST http://127.0.0.1:5000/auth/login \
   -d '{"email":"ada@example.com","password":"correct-horse-battery"}'
 ```
 
+### GET /auth/me
+
+Returns the current authenticated user for a valid access-token JWT.
+
+Request body: none.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Success response:
+
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "Ada Lovelace",
+    "email": "ada@example.com"
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
+
+Example:
+
+```bash
+curl http://127.0.0.1:5000/auth/me \
+  -H "Authorization: Bearer <accessToken>"
+```
+
 ## Future API Placeholders
 
 The following API areas are planned or partially implemented.
@@ -234,6 +290,7 @@ Current status:
 - `POST /auth/register` is implemented.
 - `POST /auth/login` is implemented.
 - Login returns an access-token JWT.
+- `GET /auth/me` is implemented and requires a valid bearer access token.
 - No refresh token or cookie behavior is implemented.
 
 ### Users
@@ -246,7 +303,8 @@ Planned endpoints may include:
 Current status:
 
 - User model and registration persistence are implemented.
-- Profile endpoints are not implemented.
+- The current authenticated user is available through `GET /auth/me`.
+- Editable profile endpoints are not implemented.
 
 ### Blogs
 
