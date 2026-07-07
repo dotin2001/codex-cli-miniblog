@@ -8,7 +8,7 @@ The first application table is `users`. Blog and comment tables will be added in
 
 ### users
 
-Stores user account records for future authentication flows. Authentication endpoints, JWT behavior, and password hashing are not implemented yet.
+Stores user account records for authentication flows. Registration stores secure password hashes. Login, JWT behavior, refresh tokens, and session cookies are not implemented yet.
 
 | Column | Type | Constraints | Notes |
 | --- | --- | --- | --- |
