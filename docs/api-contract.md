@@ -129,6 +129,88 @@ curl -X POST http://127.0.0.1:5000/auth/register \
   -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery"}'
 ```
 
+### POST /auth/login
+
+Verifies a user's email and password. This endpoint does not return tokens, set cookies, or create refresh-token state yet.
+
+Request body:
+
+```json
+{
+  "email": "ada@example.com",
+  "password": "correct-horse-battery"
+}
+```
+
+Validation:
+
+- `email` is required, trimmed, lowercased before lookup, and must be a valid email address.
+- `password` is required.
+
+Success response:
+
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "Ada Lovelace",
+    "email": "ada@example.com"
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Validation error response:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid login request.",
+    "fields": {
+      "email": "Enter a valid email address.",
+      "password": "Password is required."
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+400 Bad Request
+```
+
+Invalid credentials error response:
+
+```json
+{
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Invalid email or password."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:5000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ada@example.com","password":"correct-horse-battery"}'
+```
+
 ## Future API Placeholders
 
 The following API areas are planned or partially implemented.
@@ -137,13 +219,13 @@ The following API areas are planned or partially implemented.
 
 Planned endpoints may include:
 
-- `POST /auth/login`
 - `POST /auth/logout`
 - `POST /auth/refresh`
 
 Current status:
 
 - `POST /auth/register` is implemented.
+- `POST /auth/login` is implemented.
 - No JWT behavior is implemented.
 - No refresh token or cookie behavior is implemented.
 
