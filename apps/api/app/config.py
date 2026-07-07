@@ -12,3 +12,11 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES_SECONDS = int(
         os.getenv("JWT_ACCESS_TOKEN_EXPIRES_SECONDS", "900")
     )
+    JWT_REFRESH_TOKEN_EXPIRES_SECONDS = int(
+        os.getenv("JWT_REFRESH_TOKEN_EXPIRES_SECONDS", "604800")
+    )
+    REFRESH_TOKEN_COOKIE_NAME = os.getenv("REFRESH_TOKEN_COOKIE_NAME", "refreshToken")
+    REFRESH_TOKEN_COOKIE_SECURE = (
+        os.getenv("REFRESH_TOKEN_COOKIE_SECURE", "false").lower() == "true"
+    )
+    REFRESH_TOKEN_COOKIE_SAMESITE = os.getenv("REFRESH_TOKEN_COOKIE_SAMESITE", "Lax")

@@ -14,6 +14,10 @@ class TestConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = "test-jwt-secret"
     JWT_ACCESS_TOKEN_EXPIRES_SECONDS = 900
+    JWT_REFRESH_TOKEN_EXPIRES_SECONDS = 604800
+    REFRESH_TOKEN_COOKIE_NAME = "refreshToken"
+    REFRESH_TOKEN_COOKIE_SECURE = False
+    REFRESH_TOKEN_COOKIE_SAMESITE = "Lax"
 
 
 class LoginEndpointTestCase(unittest.TestCase):
@@ -68,6 +72,25 @@ class LoginEndpointTestCase(unittest.TestCase):
         self.assertIn("iat", payload)
         self.assertIn("exp", payload)
         self.assertEqual(payload["exp"] - payload["iat"], 900)
+
+        refresh_cookie = self.client.get_cookie("refreshToken", path="/auth")
+        self.assertIsNotNone(refresh_cookie)
+        self.assertTrue(refresh_cookie.http_only)
+        self.assertFalse(refresh_cookie.secure)
+        self.assertEqual(refresh_cookie.same_site, "Lax")
+        self.assertEqual(refresh_cookie.path, "/auth")
+
+        refresh_payload = jwt.decode(
+            refresh_cookie.value,
+            TestConfig.JWT_SECRET_KEY,
+            algorithms=["HS256"],
+        )
+        self.assertEqual(refresh_payload["sub"], "1")
+        self.assertEqual(refresh_payload["typ"], "refresh")
+        self.assertEqual(
+            refresh_payload["exp"] - refresh_payload["iat"],
+            TestConfig.JWT_REFRESH_TOKEN_EXPIRES_SECONDS,
+        )
 
     def test_login_rejects_invalid_fields(self):
         response = self.client.post(

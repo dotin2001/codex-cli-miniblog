@@ -100,11 +100,15 @@ def _public_user(user: User) -> dict[str, Any]:
     }
 
 
-def _create_access_token(user: User) -> str:
+def _jwt_secret_key() -> str:
     secret_key = current_app.config.get("JWT_SECRET_KEY")
     if not secret_key:
         raise RuntimeError("JWT_SECRET_KEY must be configured.")
 
+    return secret_key
+
+
+def _create_access_token(user: User) -> str:
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(
         seconds=current_app.config["JWT_ACCESS_TOKEN_EXPIRES_SECONDS"]
@@ -116,7 +120,46 @@ def _create_access_token(user: User) -> str:
         "exp": expires_at,
     }
 
-    return jwt.encode(payload, secret_key, algorithm="HS256")
+    return jwt.encode(payload, _jwt_secret_key(), algorithm="HS256")
+
+
+def _create_refresh_token(user: User) -> str:
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(
+        seconds=current_app.config["JWT_REFRESH_TOKEN_EXPIRES_SECONDS"]
+    )
+    payload = {
+        "sub": str(user.id),
+        "typ": "refresh",
+        "iat": now,
+        "exp": expires_at,
+    }
+
+    return jwt.encode(payload, _jwt_secret_key(), algorithm="HS256")
+
+
+def _refresh_cookie_settings() -> dict[str, Any]:
+    return {
+        "key": current_app.config["REFRESH_TOKEN_COOKIE_NAME"],
+        "httponly": True,
+        "secure": current_app.config["REFRESH_TOKEN_COOKIE_SECURE"],
+        "samesite": current_app.config["REFRESH_TOKEN_COOKIE_SAMESITE"],
+        "path": "/auth",
+    }
+
+
+def _set_refresh_cookie(response, refresh_token: str):
+    response.set_cookie(
+        value=refresh_token,
+        max_age=current_app.config["JWT_REFRESH_TOKEN_EXPIRES_SECONDS"],
+        **_refresh_cookie_settings(),
+    )
+    return response
+
+
+def _clear_refresh_cookie(response):
+    response.delete_cookie(**_refresh_cookie_settings())
+    return response
 
 
 def _authentication_error():
@@ -127,18 +170,39 @@ def _authentication_error():
     )
 
 
+def _refresh_token_error():
+    return _error_response(
+        401,
+        "UNAUTHORIZED",
+        "A valid refresh token is required.",
+    )
+
+
 def _current_user_from_authorization_header() -> User | None:
     authorization = request.headers.get("Authorization", "")
     parts = authorization.split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
         return None
 
-    secret_key = current_app.config.get("JWT_SECRET_KEY")
-    if not secret_key:
-        raise RuntimeError("JWT_SECRET_KEY must be configured.")
+    try:
+        payload = jwt.decode(parts[1], _jwt_secret_key(), algorithms=["HS256"])
+        user_id = int(payload["sub"])
+    except (KeyError, TypeError, ValueError, jwt.InvalidTokenError):
+        return None
+
+    return db.session.get(User, user_id)
+
+
+def _current_user_from_refresh_cookie() -> User | None:
+    refresh_token = request.cookies.get(current_app.config["REFRESH_TOKEN_COOKIE_NAME"])
+    if not refresh_token:
+        return None
 
     try:
-        payload = jwt.decode(parts[1], secret_key, algorithms=["HS256"])
+        payload = jwt.decode(refresh_token, _jwt_secret_key(), algorithms=["HS256"])
+        if payload.get("typ") != "refresh":
+            return None
+
         user_id = int(payload["sub"])
     except (KeyError, TypeError, ValueError, jwt.InvalidTokenError):
         return None
@@ -204,9 +268,12 @@ def login():
             "Invalid email or password.",
         )
 
-    return jsonify(
+    response = jsonify(
         {"accessToken": _create_access_token(user), "user": _public_user(user)}
-    ), 200
+    )
+    _set_refresh_cookie(response, _create_refresh_token(user))
+
+    return response, 200
 
 
 @auth_bp.get("/me")
@@ -216,3 +283,20 @@ def current_user():
         return _authentication_error()
 
     return jsonify({"user": _public_user(user)}), 200
+
+
+@auth_bp.post("/refresh")
+def refresh():
+    user = _current_user_from_refresh_cookie()
+    if user is None:
+        return _refresh_token_error()
+
+    return jsonify({"accessToken": _create_access_token(user)}), 200
+
+
+@auth_bp.post("/logout")
+def logout():
+    response = jsonify({"message": "Logged out."})
+    _clear_refresh_cookie(response)
+
+    return response, 200
