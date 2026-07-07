@@ -1,16 +1,18 @@
 from flask import Flask
 
-from app.extensions import db
+from app.config import Config
+from app.extensions import db, migrate
 from app.routes.health import health_bp
 
 
-def create_app() -> Flask:
+def create_app(config_object: type[Config] | None = None) -> Flask:
     app = Flask(__name__)
 
-    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
+    app.config.from_object(config_object or Config)
+    db.init_app(app)
+    from app import models  # noqa: F401
 
-    if app.config.get("SQLALCHEMY_DATABASE_URI"):
-        db.init_app(app)
+    migrate.init_app(app, db)
 
     app.register_blueprint(health_bp)
 
