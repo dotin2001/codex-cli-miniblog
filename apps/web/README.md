@@ -32,6 +32,16 @@ npm run dev
 
 The dev server starts with Next.js at `http://localhost:3000` by default.
 
+## Environment Variables
+
+Create `apps/web/.env.local` for local frontend configuration:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
+```
+
+`NEXT_PUBLIC_API_BASE_URL` is required by the frontend API client and should point to the MiniBlog backend origin without a trailing slash.
+
 ## Lint
 
 ```bash
@@ -60,6 +70,9 @@ apps/web/
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
+├── src/lib/api/
+│   └── auth.ts
+├── .env.example
 ├── eslint.config.mjs
 ├── next.config.js
 ├── package.json
@@ -71,7 +84,6 @@ apps/web/
 ## Current Limitations
 
 - The current UI is a static frontend shell.
-- Backend API integration is not wired yet.
+- Backend API integration is limited to a minimal auth API client.
 - Auth, profile, blog CRUD, and comments are not implemented in the frontend yet.
-- Environment variables for API URLs are not defined yet.
 - No frontend test runner is configured yet.
