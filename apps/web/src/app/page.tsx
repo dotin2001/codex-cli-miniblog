@@ -1,100 +1,99 @@
 import Link from "next/link";
 
-import { AuthPanel } from "@/components/auth-panel";
-
-const features = [
+const highlights = [
   {
-    title: "Write",
-    description: "Draft focused posts in a clean space built for quick publishing."
+    title: "Focused writing",
+    description: "A calm surface for drafting and sharing concise posts."
   },
   {
-    title: "Read",
-    description: "Browse recent stories with calm typography and simple navigation."
+    title: "Account ready",
+    description: "Login, registration, and profile lookup are wired to the MiniBlog API."
   },
   {
-    title: "Discuss",
-    description: "Keep conversations close to each post when comments arrive."
+    title: "Built to grow",
+    description: "The shell leaves room for posts, comments, and profiles as the app expands."
   }
 ];
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white text-slate-950">
-      <section className="relative isolate overflow-hidden">
-        <div className="absolute inset-x-0 top-0 -z-10 h-full bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.24),transparent_34%),linear-gradient(135deg,rgba(255,255,255,1)_0%,rgba(250,245,255,1)_50%,rgba(237,233,254,1)_100%)]" />
-        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-6 sm:px-8 lg:px-10">
+      <section className="bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 sm:px-8 lg:px-10">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col">
           <header className="flex items-center justify-between gap-4">
             <Link href="/" className="text-xl font-bold tracking-tight text-purpleInk">
               MiniBlog
             </Link>
-            <nav aria-label="Primary navigation" className="hidden items-center gap-8 text-sm font-medium text-slate-700 sm:flex">
-              <a className="transition hover:text-purpleInk" href="#features">
-                Features
-              </a>
-              <a className="transition hover:text-purpleInk" href="#start">
-                Start
-              </a>
+            <nav aria-label="Primary navigation" className="flex items-center gap-3">
+              <Link
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+                href="/login"
+              >
+                Login
+              </Link>
+              <Link
+                className="hidden min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 sm:inline-flex"
+                href="/register"
+              >
+                Register
+              </Link>
             </nav>
           </header>
 
-          <div className="grid flex-1 items-center gap-12 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+          <div className="grid flex-1 items-center gap-12 py-12 lg:grid-cols-[1.04fr_0.96fr] lg:py-16">
             <div className="max-w-2xl">
-              <h1 className="text-balance text-5xl font-bold tracking-normal text-slate-950 sm:text-6xl lg:text-7xl">
+              <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+                MiniBlog
+              </p>
+              <h1 className="mt-4 text-balance text-5xl font-bold tracking-normal text-slate-950 sm:text-6xl lg:text-7xl">
                 Share small stories with a polished MiniBlog.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-slate-700">
-                A clean starting point for posts, profiles, comments, and the auth flows that will connect to the MiniBlog API later.
+                A clean starting point for posts, profiles, comments, and auth flows that connect to the MiniBlog API.
               </p>
               <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="#start"
+                <Link
                   className="inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+                  href="/login"
                 >
-                  Explore the app
-                </a>
-                <a
-                  href="#features"
-                  className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white/80 px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-white"
+                  Login
+                </Link>
+                <Link
+                  className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+                  href="/register"
                 >
-                  View features
-                </a>
+                  Register
+                </Link>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-purple-100 bg-white/78 p-4 shadow-2xl shadow-purple-950/12 backdrop-blur">
-              <div className="rounded-xl bg-gradient-to-br from-purple-700 via-purple-500 to-fuchsia-400 p-1">
-                <AuthPanel />
+            <div className="rounded-xl border border-purple-100 bg-white p-5 shadow-2xl shadow-purple-950/10">
+              <div className="rounded-lg bg-slate-950 p-5 text-white">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-200">MiniBlog</p>
+                    <p className="mt-1 text-2xl font-bold tracking-normal">Auth workspace</p>
+                  </div>
+                  <div className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-emerald-950">
+                    Ready
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {highlights.map((item) => (
+                    <div
+                      className="rounded-lg border border-white/10 bg-white/5 p-4"
+                      key={item.title}
+                    >
+                      <h2 className="text-base font-semibold text-white">{item.title}</h2>
+                      <p className="mt-2 text-sm leading-6 text-slate-300">
+                        {item.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section id="features" className="border-y border-purple-100 bg-white px-6 py-16 sm:px-8 lg:px-10">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
-          {features.map((feature) => (
-            <div key={feature.title}>
-              <h2 className="text-xl font-bold tracking-normal text-slate-950">{feature.title}</h2>
-              <p className="mt-3 leading-7 text-slate-600">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="start" className="bg-gradient-to-r from-purple-950 via-purple-800 to-purple-600 px-6 py-16 text-white sm:px-8 lg:px-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-normal">Frontend shell is ready.</h2>
-            <p className="mt-3 max-w-2xl text-purple-100">
-              Auth forms now call the MiniBlog API while posts and comments stay out of scope.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-6 text-sm font-semibold text-purpleInk transition hover:bg-purple-50"
-          >
-            Back to top
-          </Link>
         </div>
       </section>
     </main>

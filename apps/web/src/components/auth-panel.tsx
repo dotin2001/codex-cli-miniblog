@@ -1,6 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { FormEvent, ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import {
   ApiRequestError,
@@ -11,41 +14,26 @@ import {
   register
 } from "@/lib/api/auth";
 
-type AuthMode = "login" | "register";
-
 type AuthFormError = {
   fields?: Record<string, string>;
   message: string;
 };
 
+type DashboardState =
+  | { status: "loading"; user: null; error: null }
+  | { status: "unauthenticated"; user: null; error: AuthFormError | null }
+  | { status: "authenticated"; user: AuthUser; error: AuthFormError | null };
+
 const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
 
-export function AuthPanel() {
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+export function LoginPanel() {
+  const router = useRouter();
   const [error, setError] = useState<AuthFormError | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const accessToken = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
-
-    if (!accessToken) {
-      return;
-    }
-
-    getMe(accessToken)
-      .then(({ user: currentUser }) => {
-        setUser(currentUser);
-      })
-      .catch(() => {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-      });
-  }, []);
-
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    clearFeedback();
+    setError(null);
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
@@ -57,7 +45,7 @@ export function AuthPanel() {
       });
 
       window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, response.accessToken);
-      setUser(response.user);
+      router.push("/dashboard");
     } catch (caughtError) {
       setError(toFormError(caughtError));
     } finally {
@@ -65,9 +53,47 @@ export function AuthPanel() {
     }
   }
 
+  return (
+    <AuthCard eyebrow="Welcome back" title="Log in to MiniBlog">
+      <form className="space-y-5" onSubmit={handleLogin}>
+        <TextField
+          autoComplete="email"
+          error={error?.fields?.email}
+          label="Email"
+          name="email"
+          type="email"
+        />
+        <TextField
+          autoComplete="current-password"
+          error={error?.fields?.password}
+          label="Password"
+          name="password"
+          type="password"
+        />
+        {error ? <AuthError error={error} /> : null}
+        <SubmitButton isSubmitting={isSubmitting} loadingLabel="Logging in...">
+          Log in
+        </SubmitButton>
+      </form>
+      <p className="mt-6 text-center text-sm text-slate-600">
+        Need an account?{" "}
+        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href="/register">
+          Register
+        </Link>
+      </p>
+    </AuthCard>
+  );
+}
+
+export function RegisterPanel() {
+  const [error, setError] = useState<AuthFormError | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registeredUser, setRegisteredUser] = useState<AuthUser | null>(null);
+
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    clearFeedback();
+    setError(null);
+    setRegisteredUser(null);
     setIsSubmitting(true);
 
     const form = event.currentTarget;
@@ -81,8 +107,7 @@ export function AuthPanel() {
       });
 
       form.reset();
-      setMode("login");
-      setStatusMessage(`${response.user.name} is registered. Log in to continue.`);
+      setRegisteredUser(response.user);
     } catch (caughtError) {
       setError(toFormError(caughtError));
     } finally {
@@ -90,122 +115,9 @@ export function AuthPanel() {
     }
   }
 
-  async function handleLogout() {
-    clearFeedback();
-    setIsSubmitting(true);
-
-    try {
-      await logout();
-    } catch (caughtError) {
-      setError(toFormError(caughtError));
-    } finally {
-      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-      setUser(null);
-      setIsSubmitting(false);
-    }
-  }
-
-  function handleModeChange(nextMode: AuthMode) {
-    setMode(nextMode);
-    clearFeedback();
-  }
-
-  function clearFeedback() {
-    setError(null);
-    setStatusMessage(null);
-  }
-
-  if (user) {
-    return (
-      <section aria-label="Signed in account" className="rounded-lg bg-white p-5">
-        <div className="border-b border-slate-100 pb-4">
-          <p className="text-sm font-semibold text-purpleInk">Signed in</p>
-          <h2 className="mt-2 text-2xl font-bold tracking-normal text-slate-950">
-            {user.name}
-          </h2>
-          <p className="mt-1 break-all text-sm text-slate-600">{user.email}</p>
-        </div>
-        {error ? <AuthError error={error} /> : null}
-        <button
-          className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
-          disabled={isSubmitting}
-          onClick={handleLogout}
-          type="button"
-        >
-          {isSubmitting ? "Signing out..." : "Sign out"}
-        </button>
-      </section>
-    );
-  }
-
   return (
-    <section aria-label="Authentication" className="rounded-lg bg-white p-5">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-        <div>
-          <p className="text-sm font-semibold text-purpleInk">
-            {mode === "login" ? "Welcome back" : "Create account"}
-          </p>
-          <p className="text-xs text-slate-500">MiniBlog auth</p>
-        </div>
-        <div className="grid grid-cols-2 rounded-lg bg-purple-50 p-1 text-xs font-semibold text-purpleInk">
-          <button
-            className={getModeButtonClass(mode === "login")}
-            disabled={isSubmitting}
-            onClick={() => handleModeChange("login")}
-            type="button"
-          >
-            Login
-          </button>
-          <button
-            className={getModeButtonClass(mode === "register")}
-            disabled={isSubmitting}
-            onClick={() => handleModeChange("register")}
-            type="button"
-          >
-            Register
-          </button>
-        </div>
-      </div>
-
-      {mode === "login" ? (
-        <AuthForm
-          error={error}
-          isSubmitting={isSubmitting}
-          mode="login"
-          onSubmit={handleLogin}
-          statusMessage={statusMessage}
-        />
-      ) : (
-        <AuthForm
-          error={error}
-          isSubmitting={isSubmitting}
-          mode="register"
-          onSubmit={handleRegister}
-          statusMessage={statusMessage}
-        />
-      )}
-    </section>
-  );
-}
-
-function AuthForm({
-  error,
-  isSubmitting,
-  mode,
-  onSubmit,
-  statusMessage
-}: {
-  error: AuthFormError | null;
-  isSubmitting: boolean;
-  mode: AuthMode;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  statusMessage: string | null;
-}) {
-  const isLogin = mode === "login";
-
-  return (
-    <form className="space-y-4 pt-5" onSubmit={onSubmit}>
-      {!isLogin ? (
+    <AuthCard eyebrow="Create account" title="Register for MiniBlog">
+      <form className="space-y-5" onSubmit={handleRegister}>
         <TextField
           autoComplete="name"
           error={error?.fields?.name}
@@ -213,35 +125,193 @@ function AuthForm({
           name="name"
           type="text"
         />
-      ) : null}
-      <TextField
-        autoComplete="email"
-        error={error?.fields?.email}
-        label="Email"
-        name="email"
-        type="email"
-      />
-      <TextField
-        autoComplete={isLogin ? "current-password" : "new-password"}
-        error={error?.fields?.password}
-        label="Password"
-        name="password"
-        type="password"
-      />
-      {statusMessage ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          {statusMessage}
-        </p>
-      ) : null}
-      {error ? <AuthError error={error} /> : null}
+        <TextField
+          autoComplete="email"
+          error={error?.fields?.email}
+          label="Email"
+          name="email"
+          type="email"
+        />
+        <TextField
+          autoComplete="new-password"
+          error={error?.fields?.password}
+          label="Password"
+          name="password"
+          type="password"
+        />
+        {registeredUser ? (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            {registeredUser.name} is registered. You can log in now.
+          </p>
+        ) : null}
+        {error ? <AuthError error={error} /> : null}
+        <SubmitButton isSubmitting={isSubmitting} loadingLabel="Creating account...">
+          Create account
+        </SubmitButton>
+      </form>
+      <p className="mt-6 text-center text-sm text-slate-600">
+        Already registered?{" "}
+        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href="/login">
+          Log in
+        </Link>
+      </p>
+    </AuthCard>
+  );
+}
+
+export function DashboardPanel() {
+  const router = useRouter();
+  const [state, setState] = useState<DashboardState>({
+    error: null,
+    status: "loading",
+    user: null
+  });
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCurrentUser() {
+      const accessToken = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+
+      if (!accessToken) {
+        if (isMounted) {
+          setState({
+            error: {
+              message: "Log in to view your dashboard."
+            },
+            status: "unauthenticated",
+            user: null
+          });
+        }
+        return;
+      }
+
+      try {
+        const { user } = await getMe(accessToken);
+
+        if (isMounted) {
+          setState({ error: null, status: "authenticated", user });
+        }
+      } catch (caughtError) {
+        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+
+        if (isMounted) {
+          setState({
+            error: toFormError(caughtError),
+            status: "unauthenticated",
+            user: null
+          });
+        }
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  async function handleLogout() {
+    setIsSigningOut(true);
+    setState((currentState) => ({ ...currentState, error: null }));
+
+    try {
+      await logout();
+      router.push("/login");
+    } catch (caughtError) {
+      setState({
+        error: toFormError(caughtError),
+        status: "unauthenticated",
+        user: null
+      });
+    } finally {
+      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      setIsSigningOut(false);
+    }
+  }
+
+  if (state.status === "loading") {
+    return (
+      <AuthCard eyebrow="Dashboard" title="Loading your account">
+        <div className="space-y-4">
+          <div className="h-4 w-36 rounded-full bg-purple-100" />
+          <div className="h-20 rounded-lg bg-slate-100" />
+          <div className="h-12 rounded-lg bg-purple-100" />
+        </div>
+      </AuthCard>
+    );
+  }
+
+  if (state.status === "unauthenticated") {
+    return (
+      <AuthCard eyebrow="Dashboard" title="Sign in required">
+        {state.error ? <AuthError error={state.error} /> : null}
+        <Link
+          className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+          href="/login"
+        >
+          Go to login
+        </Link>
+      </AuthCard>
+    );
+  }
+
+  return (
+    <AuthCard eyebrow="Dashboard" title={`Hello, ${state.user.name}`}>
+      <dl className="grid gap-4 rounded-xl border border-purple-100 bg-purple-50/70 p-4">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Name
+          </dt>
+          <dd className="mt-1 text-base font-semibold text-slate-950">{state.user.name}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Email
+          </dt>
+          <dd className="mt-1 break-all text-base font-semibold text-slate-950">
+            {state.user.email}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            User ID
+          </dt>
+          <dd className="mt-1 text-base font-semibold text-slate-950">{state.user.id}</dd>
+        </div>
+      </dl>
+      {state.error ? <div className="mt-5"><AuthError error={state.error} /></div> : null}
       <button
-        className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
-        disabled={isSubmitting}
-        type="submit"
+        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-70"
+        disabled={isSigningOut}
+        onClick={handleLogout}
+        type="button"
       >
-        {isSubmitting ? "Working..." : isLogin ? "Log in" : "Create account"}
+        {isSigningOut ? "Signing out..." : "Sign out"}
       </button>
-    </form>
+    </AuthCard>
+  );
+}
+
+function AuthCard({
+  children,
+  eyebrow,
+  title
+}: {
+  children: ReactNode;
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <section className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8">
+      <div className="mb-6 border-b border-slate-100 pb-5">
+        <p className="text-sm font-semibold text-purpleInk">{eyebrow}</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-normal text-slate-950">{title}</h1>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -273,23 +343,32 @@ function TextField({
   );
 }
 
+function SubmitButton({
+  children,
+  isSubmitting,
+  loadingLabel
+}: {
+  children: ReactNode;
+  isSubmitting: boolean;
+  loadingLabel: string;
+}) {
+  return (
+    <button
+      className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
+      disabled={isSubmitting}
+      type="submit"
+    >
+      {isSubmitting ? loadingLabel : children}
+    </button>
+  );
+}
+
 function AuthError({ error }: { error: AuthFormError }) {
   return (
     <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
       {error.message}
     </p>
   );
-}
-
-function getModeButtonClass(isActive: boolean): string {
-  const baseClass =
-    "rounded-md px-3 py-2 transition disabled:cursor-not-allowed disabled:opacity-70";
-
-  if (isActive) {
-    return `${baseClass} bg-white shadow-sm`;
-  }
-
-  return `${baseClass} hover:bg-white/70`;
 }
 
 function getFormValue(formData: FormData, key: string): string {
