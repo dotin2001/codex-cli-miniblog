@@ -28,6 +28,12 @@ mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3306/miniblog
 
 The Flask app reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and finally falls back to the default local database URL.
 
+Auth endpoints allow credentialed CORS requests from the local Next.js frontend origins configured by `CORS_ORIGINS`:
+
+```text
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
 ## Run
 
 ```bash

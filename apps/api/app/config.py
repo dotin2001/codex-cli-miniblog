@@ -1,6 +1,16 @@
 import os
 
 
+def _parse_cors_origins(value: str | None) -> list[str]:
+    if value is None:
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ]
+
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
+
+
 class Config:
     SQLALCHEMY_DATABASE_URI = (
         os.getenv("DATABASE_URL")
@@ -20,3 +30,4 @@ class Config:
         os.getenv("REFRESH_TOKEN_COOKIE_SECURE", "false").lower() == "true"
     )
     REFRESH_TOKEN_COOKIE_SAMESITE = os.getenv("REFRESH_TOKEN_COOKIE_SAMESITE", "Lax")
+    CORS_ORIGINS = _parse_cors_origins(os.getenv("CORS_ORIGINS"))

@@ -14,7 +14,14 @@ Backend:
 http://127.0.0.1:5000
 ```
 
-The frontend is not wired to call the backend yet.
+Auth endpoints allow credentialed browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
+
+```text
+http://localhost:3000
+http://127.0.0.1:3000
+```
+
+Credentialed auth requests support JSON request bodies, the `Authorization` header, and refresh-token cookies.
 
 ## Implemented Endpoints
 

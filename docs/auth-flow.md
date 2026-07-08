@@ -35,6 +35,8 @@ Set `REFRESH_TOKEN_COOKIE_SECURE=true` for HTTPS environments.
 
 Login does not create database-backed refresh-token state yet.
 
+Browser clients must send auth requests from an allowed `CORS_ORIGINS` origin and include credentials when they need the refresh-token cookie to be set or sent.
+
 ## Refresh
 
 1. Client sends `POST /auth/refresh` with the refresh-token cookie.
