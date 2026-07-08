@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { AuthPanel } from "@/components/auth-panel";
+
 const features = [
   {
     title: "Write",
@@ -61,33 +63,7 @@ export default function Home() {
 
             <div className="rounded-2xl border border-purple-100 bg-white/78 p-4 shadow-2xl shadow-purple-950/12 backdrop-blur">
               <div className="rounded-xl bg-gradient-to-br from-purple-700 via-purple-500 to-fuchsia-400 p-1">
-                <div className="rounded-lg bg-white p-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                      <p className="text-sm font-semibold text-purpleInk">Today&apos;s draft</p>
-                      <p className="text-xs text-slate-500">Ready to publish</p>
-                    </div>
-                    <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purpleInk">
-                      New
-                    </span>
-                  </div>
-                  <article className="space-y-4 py-6">
-                    <h2 className="text-2xl font-bold tracking-normal text-slate-950">
-                      Notes from a quiet product sprint
-                    </h2>
-                    <p className="leading-7 text-slate-600">
-                      MiniBlog keeps writing, reading, and discussion close together so a small team can ship thoughts without ceremony.
-                    </p>
-                  </article>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {features.map((feature) => (
-                      <div key={feature.title} className="rounded-lg bg-purple-50 p-4">
-                        <h3 className="font-semibold text-purpleInk">{feature.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{feature.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <AuthPanel />
               </div>
             </div>
           </div>
@@ -110,7 +86,7 @@ export default function Home() {
           <div>
             <h2 className="text-3xl font-bold tracking-normal">Frontend shell is ready.</h2>
             <p className="mt-3 max-w-2xl text-purple-100">
-              API calls are intentionally left out until the backend contract is implemented.
+              Auth forms now call the MiniBlog API while posts and comments stay out of scope.
             </p>
           </div>
           <Link

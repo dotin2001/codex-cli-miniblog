@@ -42,6 +42,12 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 
 `NEXT_PUBLIC_API_BASE_URL` is required by the frontend API client and should point to the MiniBlog backend origin without a trailing slash.
 
+## Authentication Status
+
+The homepage includes minimal login and registration forms wired to the backend auth endpoints.
+
+For development only, a successful login stores the returned access token in `localStorage` under `miniblog.dev.accessToken` so the UI can reload the current user with `GET /auth/me`. This is not a production token-storage strategy. Refresh-token automation, durable session handling, and production auth hardening are not implemented yet.
+
 ## Lint
 
 ```bash
@@ -83,7 +89,7 @@ apps/web/
 
 ## Current Limitations
 
-- The current UI is a static frontend shell.
 - Backend API integration is limited to a minimal auth API client.
-- Auth, profile, blog CRUD, and comments are not implemented in the frontend yet.
+- Auth UI is minimal and uses development-only access-token storage.
+- Profile editing, blog CRUD, refresh-token automation, and comments are not implemented in the frontend yet.
 - No frontend test runner is configured yet.
