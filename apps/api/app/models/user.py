@@ -21,3 +21,4 @@ class User(db.Model):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    blogs = db.relationship("Blog", back_populates="author")

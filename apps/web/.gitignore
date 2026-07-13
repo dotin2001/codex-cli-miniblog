@@ -1,16 +1,23 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 .pytest_cache/
-*.pyc
+.mypy_cache/
+.coverage
+htmlcov/
 
-# Environment
+# Flask / env
 .env
-.env.local
+.env.*
+!.env.example
 
-# Node
+# Node / Next.js
 node_modules/
 .next/
+out/
+dist/
+.vercel/
 
-# macOS
+# OS
 .DS_Store

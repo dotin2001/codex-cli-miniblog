@@ -2,7 +2,7 @@
 
 MiniBlog is configured for local MySQL development through Docker Compose. The backend uses SQLAlchemy, Flask-Migrate, and the PyMySQL driver.
 
-The first application table is `users`. Blog and comment tables will be added in later feature work with explicit migrations.
+The first application tables are `users` and `blogs`. Comment tables will be added in later feature work with explicit migrations.
 
 ## Tables
 
@@ -18,6 +18,31 @@ Stores user account records for authentication flows. Registration stores secure
 | `password_hash` | string(255) | not null | Reserved for a hashed password value. Never expose this field in API responses. |
 | `created_at` | datetime | not null, default current timestamp | Record creation timestamp. |
 | `updated_at` | datetime | not null, default current timestamp | Record update timestamp. |
+
+Relationship:
+
+- One user can author many blog records through `blogs.author_id`.
+
+### blogs
+
+Stores blog post records for future blog CRUD. Blog API routes, comments, likes, categories, and tags are not implemented yet.
+
+| Column | Type | Constraints | Notes |
+| --- | --- | --- | --- |
+| `id` | integer | primary key | Internal blog identifier. |
+| `title` | string(255) | not null | Blog post title. |
+| `slug` | string(255) | not null, unique, indexed | URL-friendly unique blog identifier. |
+| `excerpt` | string(500) | nullable | Short summary text for previews. |
+| `content` | text | not null | Main blog post body. |
+| `status` | string(20) | not null, default `draft`, check `draft` or `published` | Publication state for future CRUD workflows. |
+| `author_id` | integer | not null, foreign key to `users.id` | User who authored the blog post. |
+| `created_at` | datetime | not null, default current timestamp | Record creation timestamp. |
+| `updated_at` | datetime | not null, default current timestamp | Record update timestamp. |
+
+Relationship:
+
+- Each blog belongs to one user through `blogs.author_id`.
+- One user can author many blogs.
 
 ## Local MySQL
 
