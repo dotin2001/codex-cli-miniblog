@@ -5,6 +5,7 @@ from typing import Any
 
 import jwt
 from flask import Blueprint, current_app, jsonify, request
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.blog import Blog
@@ -14,6 +15,9 @@ blogs_bp = Blueprint("blogs", __name__, url_prefix="/blogs")
 
 SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 VALID_STATUSES = {Blog.STATUS_DRAFT, Blog.STATUS_PUBLISHED}
+DEFAULT_PAGE = 1
+DEFAULT_PER_PAGE = 10
+MAX_PER_PAGE = 50
 
 
 def _error_response(
@@ -34,6 +38,14 @@ def _authentication_error():
         401,
         "UNAUTHORIZED",
         "A valid bearer token is required.",
+    )
+
+
+def _blog_not_found_error():
+    return _error_response(
+        404,
+        "BLOG_NOT_FOUND",
+        "Blog was not found.",
     )
 
 
@@ -125,6 +137,28 @@ def _unique_slug(title: str) -> str:
     return slug
 
 
+def _pagination_value(name: str, default: int, maximum: int | None = None) -> int:
+    try:
+        value = int(request.args.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+    if value < 1:
+        return default
+
+    if maximum is not None:
+        return min(value, maximum)
+
+    return value
+
+
+def _serialize_author(user: User) -> dict[str, Any]:
+    return {
+        "id": user.id,
+        "name": user.name,
+    }
+
+
 def _serialize_blog(blog: Blog) -> dict[str, Any]:
     return {
         "id": blog.id,
@@ -136,6 +170,13 @@ def _serialize_blog(blog: Blog) -> dict[str, Any]:
         "authorId": blog.author_id,
         "createdAt": blog.created_at.isoformat(),
         "updatedAt": blog.updated_at.isoformat(),
+    }
+
+
+def _serialize_public_blog(blog: Blog) -> dict[str, Any]:
+    return {
+        **_serialize_blog(blog),
+        "author": _serialize_author(blog.author),
     }
 
 
@@ -166,3 +207,42 @@ def create_blog():
     db.session.commit()
 
     return jsonify({"blog": _serialize_blog(blog)}), 201
+
+
+@blogs_bp.get("")
+def list_blogs():
+    page = _pagination_value("page", DEFAULT_PAGE)
+    per_page = _pagination_value("perPage", DEFAULT_PER_PAGE, MAX_PER_PAGE)
+    query = (
+        Blog.query.options(joinedload(Blog.author))
+        .filter_by(status=Blog.STATUS_PUBLISHED)
+        .order_by(Blog.created_at.desc(), Blog.id.desc())
+    )
+    total = query.count()
+    blogs = query.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = (total + per_page - 1) // per_page
+
+    return jsonify(
+        {
+            "blogs": [_serialize_public_blog(blog) for blog in blogs],
+            "pagination": {
+                "page": page,
+                "perPage": per_page,
+                "total": total,
+                "totalPages": total_pages,
+            },
+        }
+    ), 200
+
+
+@blogs_bp.get("/<slug>")
+def get_blog(slug: str):
+    blog = (
+        Blog.query.options(joinedload(Blog.author))
+        .filter_by(slug=slug, status=Blog.STATUS_PUBLISHED)
+        .first()
+    )
+    if blog is None:
+        return _blog_not_found_error()
+
+    return jsonify({"blog": _serialize_public_blog(blog)}), 200

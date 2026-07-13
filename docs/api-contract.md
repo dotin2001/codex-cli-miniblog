@@ -14,7 +14,7 @@ Backend:
 http://127.0.0.1:5000
 ```
 
-Auth endpoints and `POST /blogs` allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
+Auth endpoints and blog endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
 
 ```text
 http://localhost:3000
@@ -23,7 +23,7 @@ http://127.0.0.1:3000
 
 Credentialed auth requests support JSON request bodies, the `Authorization` header, and refresh-token cookies.
 
-Authenticated blog requests support JSON request bodies and the `Authorization` header.
+Public blog read requests do not require authentication. Authenticated blog create requests support JSON request bodies and the `Authorization` header.
 
 ## Implemented Endpoints
 
@@ -370,6 +370,117 @@ curl http://127.0.0.1:5000/auth/me \
   -H "Authorization: Bearer <accessToken>"
 ```
 
+### GET /blogs
+
+Returns published blogs with basic pagination. Draft blogs are not included.
+
+Query parameters:
+
+- `page` is optional and defaults to `1`.
+- `perPage` is optional and defaults to `10`.
+- `perPage` is capped at `50`.
+
+Success response:
+
+```json
+{
+  "blogs": [
+    {
+      "id": 1,
+      "title": "My First Post!",
+      "slug": "my-first-post",
+      "excerpt": "A short summary.",
+      "content": "Hello from MiniBlog.",
+      "status": "published",
+      "authorId": 1,
+      "createdAt": "2026-07-13T10:00:00",
+      "updatedAt": "2026-07-13T10:00:00",
+      "author": {
+        "id": 1,
+        "name": "Ada Lovelace"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "perPage": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Example:
+
+```bash
+curl "http://127.0.0.1:5000/blogs?page=1&perPage=10"
+```
+
+### GET /blogs/:slug
+
+Returns one published blog by slug. Draft blogs are not returned.
+
+Request body: none.
+
+Success response:
+
+```json
+{
+  "blog": {
+    "id": 1,
+    "title": "My First Post!",
+    "slug": "my-first-post",
+    "excerpt": "A short summary.",
+    "content": "Hello from MiniBlog.",
+    "status": "published",
+    "authorId": 1,
+    "createdAt": "2026-07-13T10:00:00",
+    "updatedAt": "2026-07-13T10:00:00",
+    "author": {
+      "id": 1,
+      "name": "Ada Lovelace"
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_NOT_FOUND",
+    "message": "Blog was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+The not found response is returned when the slug does not exist or belongs to a draft blog.
+
+Example:
+
+```bash
+curl http://127.0.0.1:5000/blogs/my-first-post
+```
+
 ### POST /blogs
 
 Creates a blog post for the current authenticated user. This endpoint only creates blog records; list, detail, update, delete, comments, likes, categories, and tags are not implemented yet.
@@ -508,16 +619,16 @@ Current status:
 
 Planned endpoints may include:
 
-- `GET /blogs`
-- `GET /blogs/:id`
 - `PATCH /blogs/:id`
 - `DELETE /blogs/:id`
 
 Current status:
 
+- `GET /blogs` is implemented and returns published blogs with pagination.
+- `GET /blogs/:slug` is implemented and returns one published blog by slug.
 - `POST /blogs` is implemented and requires a valid bearer access token.
 - Blog model and persistence are implemented.
-- List, detail, update, and delete endpoints are not implemented.
+- Update and delete endpoints are not implemented.
 
 ### Comments
 

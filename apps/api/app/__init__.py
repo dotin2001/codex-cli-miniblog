@@ -17,7 +17,7 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
             r"/auth/*": {
                 "origins": app.config.get("CORS_ORIGINS", Config.CORS_ORIGINS),
             },
-            r"/blogs": {
+            r"/blogs.*": {
                 "origins": app.config.get("CORS_ORIGINS", Config.CORS_ORIGINS),
             }
         },
