@@ -14,7 +14,7 @@ Backend:
 http://127.0.0.1:5000
 ```
 
-Auth endpoints allow credentialed browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
+Auth endpoints and `POST /blogs` allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
 
 ```text
 http://localhost:3000
@@ -22,6 +22,8 @@ http://127.0.0.1:3000
 ```
 
 Credentialed auth requests support JSON request bodies, the `Authorization` header, and refresh-token cookies.
+
+Authenticated blog requests support JSON request bodies and the `Authorization` header.
 
 ## Implemented Endpoints
 
@@ -368,6 +370,111 @@ curl http://127.0.0.1:5000/auth/me \
   -H "Authorization: Bearer <accessToken>"
 ```
 
+### POST /blogs
+
+Creates a blog post for the current authenticated user. This endpoint only creates blog records; list, detail, update, delete, comments, likes, categories, and tags are not implemented yet.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Request body:
+
+```json
+{
+  "title": "My First Post!",
+  "excerpt": "A short summary.",
+  "content": "Hello from MiniBlog.",
+  "status": "published"
+}
+```
+
+Validation:
+
+- `title` is required, trimmed before storage, must be 255 characters or fewer, and must contain letters or numbers so a slug can be generated.
+- `content` is required and trimmed before storage.
+- `excerpt` is optional, trimmed before storage, stored as `null` when omitted or blank, and must be 500 characters or fewer.
+- `status` is optional and defaults to `draft`.
+- `status` must be `draft` or `published` when provided.
+- `slug` is generated from `title` and made unique by appending a numeric suffix when needed.
+- `authorId` is set from the authenticated user and cannot be supplied by the client.
+
+Success response:
+
+```json
+{
+  "blog": {
+    "id": 1,
+    "title": "My First Post!",
+    "slug": "my-first-post",
+    "excerpt": "A short summary.",
+    "content": "Hello from MiniBlog.",
+    "status": "published",
+    "authorId": 1,
+    "createdAt": "2026-07-13T10:00:00",
+    "updatedAt": "2026-07-13T10:00:00"
+  }
+}
+```
+
+Status code:
+
+```text
+201 Created
+```
+
+Validation error response:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid blog request.",
+    "fields": {
+      "title": "Title is required.",
+      "content": "Content is required.",
+      "status": "Status must be draft or published."
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+400 Bad Request
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:5000/blogs \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"My First Post!","content":"Hello from MiniBlog.","status":"draft"}'
+```
+
 ## Future API Placeholders
 
 The following API areas are planned or partially implemented.
@@ -402,15 +509,15 @@ Current status:
 Planned endpoints may include:
 
 - `GET /blogs`
-- `POST /blogs`
 - `GET /blogs/:id`
 - `PATCH /blogs/:id`
 - `DELETE /blogs/:id`
 
 Current status:
 
-- Not implemented.
-- No blog model or persistence is implemented.
+- `POST /blogs` is implemented and requires a valid bearer access token.
+- Blog model and persistence are implemented.
+- List, detail, update, and delete endpoints are not implemented.
 
 ### Comments
 

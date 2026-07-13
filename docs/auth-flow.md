@@ -68,7 +68,7 @@ Authorization: Bearer <accessToken>
 
 The backend verifies the token signature with `JWT_SECRET_KEY`, verifies token expiration, reads the user id from the `sub` claim, and loads the current user from the database.
 
-`GET /auth/me` returns the public user object for a valid bearer access token. Missing, malformed, invalid, expired, or unknown-user tokens return:
+`GET /auth/me` returns the public user object for a valid bearer access token. `POST /blogs` uses the same bearer-token validation and creates the blog with `author_id` set to the current user. Missing, malformed, invalid, expired, or unknown-user tokens return:
 
 ```json
 {

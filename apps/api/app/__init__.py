@@ -3,6 +3,7 @@ from flask import Flask
 from app.config import Config
 from app.extensions import cors, db, migrate
 from app.routes.auth import auth_bp
+from app.routes.blogs import blogs_bp
 from app.routes.health import health_bp
 
 
@@ -15,6 +16,9 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
         resources={
             r"/auth/*": {
                 "origins": app.config.get("CORS_ORIGINS", Config.CORS_ORIGINS),
+            },
+            r"/blogs": {
+                "origins": app.config.get("CORS_ORIGINS", Config.CORS_ORIGINS),
             }
         },
         supports_credentials=True,
@@ -26,6 +30,7 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
     migrate.init_app(app, db)
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(blogs_bp)
     app.register_blueprint(health_bp)
 
     return app
