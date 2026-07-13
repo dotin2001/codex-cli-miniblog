@@ -57,6 +57,14 @@ def _forbidden_error():
     )
 
 
+def _delete_forbidden_error():
+    return _error_response(
+        403,
+        "FORBIDDEN",
+        "Only the blog author can delete this blog.",
+    )
+
+
 def _jwt_secret_key() -> str:
     secret_key = current_app.config.get("JWT_SECRET_KEY")
     if not secret_key:
@@ -312,6 +320,25 @@ def update_blog(slug: str):
     db.session.commit()
 
     return jsonify({"blog": _serialize_blog(blog)}), 200
+
+
+@blogs_bp.delete("/<slug>")
+def delete_blog(slug: str):
+    user = _current_user_from_authorization_header()
+    if user is None:
+        return _authentication_error()
+
+    blog = Blog.query.filter_by(slug=slug).first()
+    if blog is None:
+        return _blog_not_found_error()
+
+    if blog.author_id != user.id:
+        return _delete_forbidden_error()
+
+    db.session.delete(blog)
+    db.session.commit()
+
+    return jsonify({"message": "Blog deleted."}), 200
 
 
 @blogs_bp.get("")

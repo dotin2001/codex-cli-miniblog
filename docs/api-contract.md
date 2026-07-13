@@ -483,7 +483,7 @@ curl http://127.0.0.1:5000/blogs/my-first-post
 
 ### POST /blogs
 
-Creates a blog post for the current authenticated user. This endpoint only creates blog records; delete, comments, likes, categories, and tags are not implemented yet.
+Creates a blog post for the current authenticated user. This endpoint only creates blog records; comments, likes, categories, and tags are not implemented yet.
 
 Headers:
 
@@ -724,6 +724,92 @@ curl -X PATCH http://127.0.0.1:5000/blogs/my-first-post \
   -d '{"title":"Updated Post Title","status":"published"}'
 ```
 
+### DELETE /blogs/:slug
+
+Deletes a blog post by slug. This endpoint requires a valid bearer access token and only the blog author can delete the blog. It can delete draft or published blogs.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Request body: none.
+
+Success response:
+
+```json
+{
+  "message": "Blog deleted."
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
+
+Authorization error response:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Only the blog author can delete this blog."
+  }
+}
+```
+
+Status code:
+
+```text
+403 Forbidden
+```
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_NOT_FOUND",
+    "message": "Blog was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+Example:
+
+```bash
+curl -X DELETE http://127.0.0.1:5000/blogs/my-first-post \
+  -H "Authorization: Bearer <accessToken>"
+```
+
 ## Future API Placeholders
 
 The following API areas are planned or partially implemented.
@@ -757,7 +843,7 @@ Current status:
 
 Planned endpoints may include:
 
-- `DELETE /blogs/:id`
+- Additional blog workflow endpoints may be added later.
 
 Current status:
 
@@ -765,8 +851,8 @@ Current status:
 - `GET /blogs/:slug` is implemented and returns one published blog by slug.
 - `POST /blogs` is implemented and requires a valid bearer access token.
 - `PATCH /blogs/:slug` is implemented and only allows the blog author to update.
+- `DELETE /blogs/:slug` is implemented and only allows the blog author to delete.
 - Blog model and persistence are implemented.
-- Delete endpoint is not implemented.
 
 ### Comments
 
