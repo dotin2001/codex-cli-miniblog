@@ -23,7 +23,7 @@ http://127.0.0.1:3000
 
 Credentialed auth requests support JSON request bodies, the `Authorization` header, and refresh-token cookies.
 
-Public blog read requests do not require authentication. Authenticated blog create requests support JSON request bodies and the `Authorization` header.
+Public blog read requests do not require authentication. Authenticated blog create and update requests support JSON request bodies and the `Authorization` header.
 
 ## Implemented Endpoints
 
@@ -483,7 +483,7 @@ curl http://127.0.0.1:5000/blogs/my-first-post
 
 ### POST /blogs
 
-Creates a blog post for the current authenticated user. This endpoint only creates blog records; list, detail, update, delete, comments, likes, categories, and tags are not implemented yet.
+Creates a blog post for the current authenticated user. This endpoint only creates blog records; delete, comments, likes, categories, and tags are not implemented yet.
 
 Headers:
 
@@ -586,6 +586,144 @@ curl -X POST http://127.0.0.1:5000/blogs \
   -d '{"title":"My First Post!","content":"Hello from MiniBlog.","status":"draft"}'
 ```
 
+### PATCH /blogs/:slug
+
+Updates a blog post by slug. This endpoint requires a valid bearer access token and only the blog author can update the blog. It can update draft or published blogs.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Request body:
+
+```json
+{
+  "title": "Updated Post Title",
+  "excerpt": "Updated summary.",
+  "content": "Updated blog content.",
+  "status": "published"
+}
+```
+
+Validation:
+
+- All fields are optional.
+- `title`, when provided, is trimmed before storage, must not be blank, must be 255 characters or fewer, and must contain letters or numbers so a slug can be generated.
+- The blog `slug` is regenerated only when `title` changes.
+- Regenerated slugs are made unique by appending a numeric suffix when needed.
+- `content`, when provided, is trimmed before storage and must not be blank.
+- `excerpt`, when provided, is trimmed before storage, stored as `null` when blank or `null`, and must be 500 characters or fewer.
+- `status`, when provided, must be `draft` or `published`.
+- `authorId` cannot be changed by the client.
+
+Success response:
+
+```json
+{
+  "blog": {
+    "id": 1,
+    "title": "Updated Post Title",
+    "slug": "updated-post-title",
+    "excerpt": "Updated summary.",
+    "content": "Updated blog content.",
+    "status": "published",
+    "authorId": 1,
+    "createdAt": "2026-07-13T10:00:00",
+    "updatedAt": "2026-07-14T10:00:00"
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Validation error response:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid blog request.",
+    "fields": {
+      "title": "Title cannot be blank.",
+      "content": "Content cannot be blank.",
+      "status": "Status must be draft or published."
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+400 Bad Request
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+Authorization error response:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Only the blog author can update this blog."
+  }
+}
+```
+
+Status code:
+
+```text
+403 Forbidden
+```
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_NOT_FOUND",
+    "message": "Blog was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+Example:
+
+```bash
+curl -X PATCH http://127.0.0.1:5000/blogs/my-first-post \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Updated Post Title","status":"published"}'
+```
+
 ## Future API Placeholders
 
 The following API areas are planned or partially implemented.
@@ -619,7 +757,6 @@ Current status:
 
 Planned endpoints may include:
 
-- `PATCH /blogs/:id`
 - `DELETE /blogs/:id`
 
 Current status:
@@ -627,8 +764,9 @@ Current status:
 - `GET /blogs` is implemented and returns published blogs with pagination.
 - `GET /blogs/:slug` is implemented and returns one published blog by slug.
 - `POST /blogs` is implemented and requires a valid bearer access token.
+- `PATCH /blogs/:slug` is implemented and only allows the blog author to update.
 - Blog model and persistence are implemented.
-- Update and delete endpoints are not implemented.
+- Delete endpoint is not implemented.
 
 ### Comments
 

@@ -49,6 +49,14 @@ def _blog_not_found_error():
     )
 
 
+def _forbidden_error():
+    return _error_response(
+        403,
+        "FORBIDDEN",
+        "Only the blog author can update this blog.",
+    )
+
+
 def _jwt_secret_key() -> str:
     secret_key = current_app.config.get("JWT_SECRET_KEY")
     if not secret_key:
@@ -121,20 +129,75 @@ def _validate_create_blog_payload(
     return data, fields
 
 
+def _validate_update_blog_payload(
+    payload: Any,
+) -> tuple[dict[str, str | None], dict[str, str]]:
+    fields: dict[str, str] = {}
+    data: dict[str, str | None] = {}
+
+    if not isinstance(payload, dict):
+        return data, {"body": "Request body must be a JSON object."}
+
+    if "title" in payload:
+        raw_title = payload.get("title")
+        title = raw_title.strip() if isinstance(raw_title, str) else ""
+        if not title:
+            fields["title"] = "Title cannot be blank."
+        elif len(title) > 255:
+            fields["title"] = "Title must be 255 characters or fewer."
+        elif not _slug_base(title):
+            fields["title"] = "Title must include letters or numbers."
+        else:
+            data["title"] = title
+
+    if "content" in payload:
+        raw_content = payload.get("content")
+        content = raw_content.strip() if isinstance(raw_content, str) else ""
+        if not content:
+            fields["content"] = "Content cannot be blank."
+        else:
+            data["content"] = content
+
+    if "excerpt" in payload:
+        raw_excerpt = payload.get("excerpt")
+        if raw_excerpt is None:
+            data["excerpt"] = None
+        elif not isinstance(raw_excerpt, str):
+            fields["excerpt"] = "Excerpt must be a string."
+        else:
+            excerpt = raw_excerpt.strip()
+            if len(excerpt) > 500:
+                fields["excerpt"] = "Excerpt must be 500 characters or fewer."
+            else:
+                data["excerpt"] = excerpt or None
+
+    if "status" in payload:
+        raw_status = payload.get("status")
+        status = raw_status.strip() if isinstance(raw_status, str) else ""
+        if status not in VALID_STATUSES:
+            fields["status"] = "Status must be draft or published."
+        else:
+            data["status"] = status
+
+    return data, fields
+
+
 def _slug_base(title: str) -> str:
     return SLUG_PATTERN.sub("-", title.lower()).strip("-")
 
 
-def _unique_slug(title: str) -> str:
+def _unique_slug(title: str, exclude_blog_id: int | None = None) -> str:
     base_slug = _slug_base(title)
     slug = base_slug
     suffix = 2
 
-    while Blog.query.filter_by(slug=slug).first() is not None:
+    while True:
+        existing_blog = Blog.query.filter_by(slug=slug).first()
+        if existing_blog is None or existing_blog.id == exclude_blog_id:
+            return slug
+
         slug = f"{base_slug}-{suffix}"
         suffix += 1
-
-    return slug
 
 
 def _pagination_value(name: str, default: int, maximum: int | None = None) -> int:
@@ -207,6 +270,48 @@ def create_blog():
     db.session.commit()
 
     return jsonify({"blog": _serialize_blog(blog)}), 201
+
+
+@blogs_bp.patch("/<slug>")
+def update_blog(slug: str):
+    user = _current_user_from_authorization_header()
+    if user is None:
+        return _authentication_error()
+
+    blog = Blog.query.filter_by(slug=slug).first()
+    if blog is None:
+        return _blog_not_found_error()
+
+    if blog.author_id != user.id:
+        return _forbidden_error()
+
+    data, fields = _validate_update_blog_payload(request.get_json(silent=True))
+    if fields:
+        return _error_response(
+            400,
+            "VALIDATION_ERROR",
+            "Invalid blog request.",
+            fields,
+        )
+
+    if "title" in data:
+        title = data["title"]
+        if title != blog.title:
+            blog.title = title
+            blog.slug = _unique_slug(title, exclude_blog_id=blog.id)
+
+    if "excerpt" in data:
+        blog.excerpt = data["excerpt"]
+
+    if "content" in data:
+        blog.content = data["content"]
+
+    if "status" in data:
+        blog.status = data["status"]
+
+    db.session.commit()
+
+    return jsonify({"blog": _serialize_blog(blog)}), 200
 
 
 @blogs_bp.get("")
