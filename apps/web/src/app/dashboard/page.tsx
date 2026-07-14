@@ -31,6 +31,12 @@ export default function DashboardPage() {
             <p className="mt-5 text-lg leading-8 text-slate-600">
               Review the authenticated user returned by the MiniBlog API.
             </p>
+            <Link
+              className="mt-8 inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+              href="/dashboard/blogs/new"
+            >
+              Create New Blog
+            </Link>
           </div>
           <div className="w-full max-w-md justify-self-center lg:justify-self-end">
             <DashboardPanel />

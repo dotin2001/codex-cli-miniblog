@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CreateBlogCta } from "./create-blog-cta";
 import { ApiRequestError, getBlogs } from "@/lib/api/blogs";
 import type { Blog, Pagination } from "@/lib/api/blogs";
 
@@ -51,6 +52,7 @@ function BlogShell({ children }: { children: React.ReactNode }) {
             MiniBlog
           </Link>
           <nav aria-label="Blog navigation" className="flex items-center gap-3">
+            <CreateBlogCta />
             <Link
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
               href="/login"
