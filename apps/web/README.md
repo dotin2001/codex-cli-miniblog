@@ -45,6 +45,8 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 ## Routes
 
 - `/` is a simple landing page with Login and Register entry points.
+- `/blogs` lists published blog posts from `GET /blogs`.
+- `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug`.
 - `/login` contains the login form and redirects to `/dashboard` after a successful login.
 - `/register` contains the registration form. Registration does not log the user in automatically.
 - `/dashboard` loads the authenticated user with `GET /auth/me` using the development access token.
@@ -52,6 +54,7 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 ## Authentication Status
 
 Login and registration forms are wired to the backend auth endpoints through `src/lib/api/auth.ts`.
+Blog endpoint helpers live in `src/lib/api/blogs.ts` and use the same `NEXT_PUBLIC_API_BASE_URL`, JSON error parsing, credential mode, and bearer access-token pattern as the auth client.
 
 For development only, a successful login stores the returned access token in `localStorage` under `miniblog.dev.accessToken` so the UI can reload the current user with `GET /auth/me`. This is not a production token-storage strategy. Refresh-token automation, durable session handling, and production auth hardening are not implemented yet.
 
@@ -81,13 +84,17 @@ npx -p node@20 node node_modules/next/dist/bin/next build
 apps/web/
 ├── src/app/
 │   ├── dashboard/
+│   ├── blogs/
+│   │   └── [slug]/
 │   ├── login/
 │   ├── register/
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
 ├── src/lib/api/
-│   └── auth.ts
+│   ├── auth.ts
+│   ├── blogs.ts
+│   └── client.ts
 ├── .env.example
 ├── eslint.config.mjs
 ├── next.config.js
@@ -99,7 +106,7 @@ apps/web/
 
 ## Current Limitations
 
-- Backend API integration is limited to a minimal auth API client.
+- Backend API integration currently includes auth helpers and a typed blog API client.
 - Auth UI uses development-only access-token storage.
-- Profile editing, blog CRUD, refresh-token automation, and comments are not implemented in the frontend yet.
+- Profile editing, blog write UI, refresh-token automation, and comments are not implemented in the frontend yet.
 - No frontend test runner is configured yet.
