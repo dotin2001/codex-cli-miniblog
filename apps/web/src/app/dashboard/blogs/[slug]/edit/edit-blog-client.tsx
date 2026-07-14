@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { ApiRequestError as AuthApiRequestError, getMe } from "@/lib/api/auth";
+import type { AuthUser } from "@/lib/api/auth";
 import { ApiRequestError, deleteBlog, getBlog, updateBlog } from "@/lib/api/blogs";
 import type { Blog, BlogStatus, UpdateBlogPayload } from "@/lib/api/blogs";
 
@@ -35,6 +37,33 @@ type BlogLoadState =
       status: "not-found";
     };
 
+type CurrentUserState =
+  | {
+      status: "idle";
+      user: null;
+      message?: never;
+    }
+  | {
+      status: "loading";
+      user: null;
+      message?: never;
+    }
+  | {
+      status: "ready";
+      user: AuthUser;
+      message?: never;
+    }
+  | {
+      status: "unauthenticated";
+      user: null;
+      message: string;
+    }
+  | {
+      status: "error";
+      user: null;
+      message: string;
+    };
+
 const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
 
 export function EditBlogClient({ slug }: { slug: string }) {
@@ -44,6 +73,10 @@ export function EditBlogClient({ slug }: { slug: string }) {
   const [blogState, setBlogState] = useState<BlogLoadState>({
     blog: null,
     status: "loading"
+  });
+  const [currentUserState, setCurrentUserState] = useState<CurrentUserState>({
+    status: "idle",
+    user: null
   });
   const [formError, setFormError] = useState<FormError | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -89,12 +122,67 @@ export function EditBlogClient({ slug }: { slug: string }) {
     };
   }, [slug]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCurrentUser() {
+      if (!activeAccessToken) {
+        setCurrentUserState({
+          message: "Log in to edit this blog post.",
+          status: "unauthenticated",
+          user: null
+        });
+        return;
+      }
+
+      setCurrentUserState({ status: "loading", user: null });
+
+      try {
+        const { user } = await getMe(activeAccessToken);
+
+        if (isMounted) {
+          setCurrentUserState({ status: "ready", user });
+        }
+      } catch (error) {
+        if (error instanceof AuthApiRequestError && error.status === 401) {
+          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+          setRemovedToken(true);
+        }
+
+        if (isMounted) {
+          setCurrentUserState({
+            message: getAuthErrorMessage(error),
+            status: error instanceof AuthApiRequestError && error.status === 401
+              ? "unauthenticated"
+              : "error",
+            user: null
+          });
+        }
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeAccessToken]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
 
     if (!activeAccessToken) {
       setFormError({ message: "Log in to edit this blog post." });
+      return;
+    }
+
+    if (
+      blogState.status !== "ready" ||
+      currentUserState.status !== "ready" ||
+      !isCurrentUserAuthor(blogState.blog, currentUserState.user)
+    ) {
+      setFormError({ message: "Only the blog author can edit this post." });
       return;
     }
 
@@ -118,6 +206,15 @@ export function EditBlogClient({ slug }: { slug: string }) {
 
     if (!activeAccessToken) {
       setFormError({ message: "Log in to delete this blog post." });
+      return;
+    }
+
+    if (
+      blogState.status !== "ready" ||
+      currentUserState.status !== "ready" ||
+      !isCurrentUserAuthor(blogState.blog, currentUserState.user)
+    ) {
+      setFormError({ message: "Only the blog author can delete this post." });
       return;
     }
 
@@ -182,6 +279,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
           <EditBlogContent
             accessToken={activeAccessToken}
             blogState={blogState}
+            currentUserState={currentUserState}
             error={formError}
             isDeleting={isDeleting}
             isSaving={isSaving}
@@ -197,6 +295,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
 function EditBlogContent({
   accessToken,
   blogState,
+  currentUserState,
   error,
   isDeleting,
   isSaving,
@@ -205,13 +304,14 @@ function EditBlogContent({
 }: {
   accessToken: string | null;
   blogState: BlogLoadState;
+  currentUserState: CurrentUserState;
   error: FormError | null;
   isDeleting: boolean;
   isSaving: boolean;
   onDelete: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  if (blogState.status === "loading") {
+  if (blogState.status === "loading" || currentUserState.status === "loading") {
     return <LoadingState />;
   }
 
@@ -226,9 +326,20 @@ function EditBlogContent({
   if (!accessToken) {
     return (
       <UnauthenticatedState
-        error={error ?? { message: "Log in to edit this blog post." }}
+        error={error ?? { message: currentUserState.message ?? "Log in to edit this blog post." }}
       />
     );
+  }
+
+  if (currentUserState.status === "error") {
+    return <ErrorState message={currentUserState.message} />;
+  }
+
+  if (
+    currentUserState.status !== "ready" ||
+    !isCurrentUserAuthor(blogState.blog, currentUserState.user)
+  ) {
+    return <ForbiddenState />;
   }
 
   return (
@@ -360,6 +471,28 @@ function NotFoundState({ message }: { message: string }) {
       </h2>
       <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-slate-700">
         {message}
+      </p>
+      <Link
+        className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        href="/blogs"
+      >
+        Back to blogs
+      </Link>
+    </div>
+  );
+}
+
+function ForbiddenState() {
+  return (
+    <div className="rounded-xl border border-purple-100 bg-white p-8 text-center shadow-2xl shadow-purple-950/10">
+      <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+        Author access required
+      </p>
+      <h2 className="mt-3 text-2xl font-bold tracking-normal text-slate-950">
+        You cannot edit this post.
+      </h2>
+      <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-slate-700">
+        Only the author of this MiniBlog post can edit or delete it.
       </p>
       <Link
         className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
@@ -528,6 +661,14 @@ function getErrorMessage(error: unknown): string {
   return "The blog post could not be loaded. Try again later.";
 }
 
+function getAuthErrorMessage(error: unknown): string {
+  if (error instanceof AuthApiRequestError) {
+    return error.message;
+  }
+
+  return "The current user could not be loaded. Try again later.";
+}
+
 function toFormError(error: unknown): FormError {
   if (error instanceof ApiRequestError) {
     return {
@@ -539,4 +680,8 @@ function toFormError(error: unknown): FormError {
   return {
     message: "Something went wrong. Try again."
   };
+}
+
+function isCurrentUserAuthor(blog: Blog, user: AuthUser): boolean {
+  return user.id === (blog.author?.id ?? blog.authorId);
 }

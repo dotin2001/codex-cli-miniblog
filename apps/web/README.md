@@ -46,9 +46,9 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 
 - `/` is a simple landing page with Login and Register entry points.
 - `/blogs` lists published blog posts from `GET /blogs` and shows a development-only `Create Blog` CTA when `localStorage` contains `miniblog.dev.accessToken`.
-- `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug`.
+- `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug` and shows author-only `Edit Blog` and `Delete Blog` actions when `GET /auth/me` matches the blog author.
 - `/dashboard/blogs/new` creates a blog post with `POST /blogs` using the development access token.
-- `/dashboard/blogs/[slug]/edit` updates and deletes a blog post with the development access token.
+- `/dashboard/blogs/[slug]/edit` loads the blog and current user, then allows update/delete only when the current user is the blog author.
 - `/login` contains the login form and redirects to `/dashboard` after a successful login.
 - `/register` contains the registration form. Registration does not log the user in automatically.
 - `/dashboard` loads the authenticated user with `GET /auth/me` using the development access token and links to `/dashboard/blogs/new` with `Create New Blog`.

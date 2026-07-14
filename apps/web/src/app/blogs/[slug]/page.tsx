@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BlogOwnerActions } from "./blog-owner-actions";
 import { ApiRequestError, getBlog } from "@/lib/api/blogs";
 import type { Blog } from "@/lib/api/blogs";
 
@@ -121,14 +122,7 @@ function BlogArticle({ blog }: { blog: Blog }) {
           {blog.content}
         </div>
       </div>
-      <div className="mt-8 flex justify-end">
-        <Link
-          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-          href={`/dashboard/blogs/${blog.slug}/edit`}
-        >
-          Edit post
-        </Link>
-      </div>
+      <BlogOwnerActions blog={blog} />
     </article>
   );
 }
