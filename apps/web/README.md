@@ -47,6 +47,8 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 - `/` is a simple landing page with Login and Register entry points.
 - `/blogs` lists published blog posts from `GET /blogs`.
 - `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug`.
+- `/dashboard/blogs/new` creates a blog post with `POST /blogs` using the development access token.
+- `/dashboard/blogs/[slug]/edit` updates and deletes a blog post with the development access token.
 - `/login` contains the login form and redirects to `/dashboard` after a successful login.
 - `/register` contains the registration form. Registration does not log the user in automatically.
 - `/dashboard` loads the authenticated user with `GET /auth/me` using the development access token.
@@ -84,6 +86,9 @@ npx -p node@20 node node_modules/next/dist/bin/next build
 apps/web/
 ├── src/app/
 │   ├── dashboard/
+│   │   └── blogs/
+│   │       ├── [slug]/
+│   │       └── new/
 │   ├── blogs/
 │   │   └── [slug]/
 │   ├── login/
@@ -108,5 +113,5 @@ apps/web/
 
 - Backend API integration currently includes auth helpers and a typed blog API client.
 - Auth UI uses development-only access-token storage.
-- Profile editing, blog write UI, refresh-token automation, and comments are not implemented in the frontend yet.
+- Profile editing, dashboard blog listing, refresh-token automation, and comments are not implemented in the frontend yet.
 - No frontend test runner is configured yet.
