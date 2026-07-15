@@ -14,7 +14,7 @@ Backend:
 http://127.0.0.1:5000
 ```
 
-Auth endpoints and blog endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
+Auth, blog, and comment endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
 
 ```text
 http://localhost:3000
@@ -23,7 +23,7 @@ http://127.0.0.1:3000
 
 Credentialed auth requests support JSON request bodies, the `Authorization` header, and refresh-token cookies.
 
-Public blog and comment read requests do not require authentication. Authenticated blog writes and comment creation support JSON request bodies and the `Authorization` header.
+Public blog and comment read requests do not require authentication. Authenticated blog writes and comment writes support JSON request bodies and the `Authorization` header.
 
 ## Implemented Endpoints
 
@@ -659,6 +659,222 @@ curl -X POST http://127.0.0.1:5000/blogs/my-first-post/comments \
   -d '{"content":"Great post."}'
 ```
 
+### PATCH /comments/:comment_id
+
+Updates a comment by id. This endpoint requires a valid bearer access token and only the comment author can update the comment.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Request body:
+
+```json
+{
+  "content": "Updated comment."
+}
+```
+
+Validation:
+
+- `content` is required, trimmed before storage, and must not be blank.
+- `authorId` and `blogId` cannot be changed by the client.
+
+Success response:
+
+```json
+{
+  "comment": {
+    "id": 1,
+    "content": "Updated comment.",
+    "authorId": 2,
+    "blogId": 1,
+    "createdAt": "2026-07-15T10:00:00",
+    "updatedAt": "2026-07-15T10:05:00",
+    "author": {
+      "id": 2,
+      "name": "Grace Hopper"
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Validation error response:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid comment request.",
+    "fields": {
+      "content": "Content cannot be blank."
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+400 Bad Request
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
+
+Authorization error response:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Only the comment author can update this comment."
+  }
+}
+```
+
+Status code:
+
+```text
+403 Forbidden
+```
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "COMMENT_NOT_FOUND",
+    "message": "Comment was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+Example:
+
+```bash
+curl -X PATCH http://127.0.0.1:5000/comments/1 \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Updated comment."}'
+```
+
+### DELETE /comments/:comment_id
+
+Deletes a comment by id. This endpoint requires a valid bearer access token and only the comment author can delete the comment.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Request body: none.
+
+Success response:
+
+```json
+{
+  "message": "Comment deleted."
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
+
+Authorization error response:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Only the comment author can delete this comment."
+  }
+}
+```
+
+Status code:
+
+```text
+403 Forbidden
+```
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "COMMENT_NOT_FOUND",
+    "message": "Comment was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+Example:
+
+```bash
+curl -X DELETE http://127.0.0.1:5000/comments/1 \
+  -H "Authorization: Bearer <accessToken>"
+```
+
 ### POST /blogs
 
 Creates a blog post for the current authenticated user. This endpoint only creates blog records; likes, categories, and tags are not implemented yet.
@@ -1034,16 +1250,13 @@ Current status:
 
 ### Comments
 
-Planned endpoints may include:
-
-- `DELETE /comments/:id`
-
 Current status:
 
 - `GET /blogs/:slug/comments` is implemented and returns comments for one published blog.
 - `POST /blogs/:slug/comments` is implemented and requires a valid bearer access token.
+- `PATCH /comments/:comment_id` is implemented and only allows the comment author to update.
+- `DELETE /comments/:comment_id` is implemented and only allows the comment author to delete.
 - Comment model and persistence are implemented.
-- Comment update and delete endpoints are not implemented.
 
 ## Notes
 
