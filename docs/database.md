@@ -2,7 +2,7 @@
 
 MiniBlog is configured for local MySQL development through Docker Compose. The backend uses SQLAlchemy, Flask-Migrate, and the PyMySQL driver.
 
-The first application tables are `users` and `blogs`. Comment tables will be added in later feature work with explicit migrations.
+The first application tables are `users`, `blogs`, and `comments`.
 
 ## Tables
 
@@ -22,10 +22,11 @@ Stores user account records for authentication flows. Registration stores secure
 Relationship:
 
 - One user can author many blog records through `blogs.author_id`.
+- One user can author many comment records through `comments.author_id`.
 
 ### blogs
 
-Stores blog post records for future blog CRUD. Blog API routes, comments, likes, categories, and tags are not implemented yet.
+Stores blog post records for blog CRUD. Comment API routes, likes, categories, and tags are not implemented yet.
 
 | Column | Type | Constraints | Notes |
 | --- | --- | --- | --- |
@@ -43,6 +44,27 @@ Relationship:
 
 - Each blog belongs to one user through `blogs.author_id`.
 - One user can author many blogs.
+- One blog can have many comments through `comments.blog_id`.
+
+### comments
+
+Stores comment records for blog posts. Comment API routes are not implemented yet.
+
+| Column | Type | Constraints | Notes |
+| --- | --- | --- | --- |
+| `id` | integer | primary key | Internal comment identifier. |
+| `content` | text | not null | Comment body text. |
+| `author_id` | integer | not null, foreign key to `users.id` | User who authored the comment. |
+| `blog_id` | integer | not null, foreign key to `blogs.id` | Blog post that owns the comment. |
+| `created_at` | datetime | not null, default current timestamp | Record creation timestamp. |
+| `updated_at` | datetime | not null, default current timestamp | Record update timestamp. |
+
+Relationship:
+
+- Each comment belongs to one user through `comments.author_id`.
+- Each comment belongs to one blog through `comments.blog_id`.
+- One user can author many comments.
+- One blog can have many comments.
 
 ## Local MySQL
 

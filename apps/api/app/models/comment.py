@@ -3,13 +3,13 @@ from sqlalchemy.sql import func
 from app.extensions import db
 
 
-class User(db.Model):
-    __tablename__ = "users"
+class Comment(db.Model):
+    __tablename__ = "comments"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(255), nullable=False, unique=True, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    blog_id = db.Column(db.Integer, db.ForeignKey("blogs.id"), nullable=False)
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
@@ -21,5 +21,6 @@ class User(db.Model):
         server_default=func.now(),
         onupdate=func.now(),
     )
-    blogs = db.relationship("Blog", back_populates="author")
-    comments = db.relationship("Comment", back_populates="author")
+
+    author = db.relationship("User", back_populates="comments")
+    blog = db.relationship("Blog", back_populates="comments")

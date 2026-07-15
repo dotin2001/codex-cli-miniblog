@@ -40,3 +40,8 @@ class Blog(db.Model):
     )
 
     author = db.relationship("User", back_populates="blogs")
+    comments = db.relationship(
+        "Comment",
+        back_populates="blog",
+        cascade="all, delete-orphan",
+    )
