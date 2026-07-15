@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.blog import Blog
+from app.models.comment import Comment
 from app.models.user import User
 
 blogs_bp = Blueprint("blogs", __name__, url_prefix="/blogs")
@@ -190,6 +191,25 @@ def _validate_update_blog_payload(
     return data, fields
 
 
+def _validate_create_comment_payload(
+    payload: Any,
+) -> tuple[dict[str, str], dict[str, str]]:
+    fields: dict[str, str] = {}
+    data: dict[str, str] = {}
+
+    if not isinstance(payload, dict):
+        return data, {"body": "Request body must be a JSON object."}
+
+    raw_content = payload.get("content")
+    content = raw_content.strip() if isinstance(raw_content, str) else ""
+    if not content:
+        fields["content"] = "Content is required."
+    else:
+        data["content"] = content
+
+    return data, fields
+
+
 def _slug_base(title: str) -> str:
     return SLUG_PATTERN.sub("-", title.lower()).strip("-")
 
@@ -249,6 +269,22 @@ def _serialize_public_blog(blog: Blog) -> dict[str, Any]:
         **_serialize_blog(blog),
         "author": _serialize_author(blog.author),
     }
+
+
+def _serialize_comment(comment: Comment) -> dict[str, Any]:
+    return {
+        "id": comment.id,
+        "content": comment.content,
+        "authorId": comment.author_id,
+        "blogId": comment.blog_id,
+        "createdAt": comment.created_at.isoformat(),
+        "updatedAt": comment.updated_at.isoformat(),
+        "author": _serialize_author(comment.author),
+    }
+
+
+def _published_blog_by_slug(slug: str) -> Blog | None:
+    return Blog.query.filter_by(slug=slug, status=Blog.STATUS_PUBLISHED).first()
 
 
 @blogs_bp.post("")
@@ -339,6 +375,54 @@ def delete_blog(slug: str):
     db.session.commit()
 
     return jsonify({"message": "Blog deleted."}), 200
+
+
+@blogs_bp.post("/<slug>/comments")
+def create_comment(slug: str):
+    user = _current_user_from_authorization_header()
+    if user is None:
+        return _authentication_error()
+
+    blog = _published_blog_by_slug(slug)
+    if blog is None:
+        return _blog_not_found_error()
+
+    data, fields = _validate_create_comment_payload(request.get_json(silent=True))
+    if fields:
+        return _error_response(
+            400,
+            "VALIDATION_ERROR",
+            "Invalid comment request.",
+            fields,
+        )
+
+    comment = Comment(
+        content=data["content"],
+        author_id=user.id,
+        blog_id=blog.id,
+    )
+    db.session.add(comment)
+    db.session.commit()
+
+    return jsonify({"comment": _serialize_comment(comment)}), 201
+
+
+@blogs_bp.get("/<slug>/comments")
+def list_comments(slug: str):
+    blog = _published_blog_by_slug(slug)
+    if blog is None:
+        return _blog_not_found_error()
+
+    comments = (
+        Comment.query.options(joinedload(Comment.author))
+        .filter_by(blog_id=blog.id)
+        .order_by(Comment.created_at.asc(), Comment.id.asc())
+        .all()
+    )
+
+    return jsonify(
+        {"comments": [_serialize_comment(comment) for comment in comments]}
+    ), 200
 
 
 @blogs_bp.get("")

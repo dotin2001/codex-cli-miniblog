@@ -26,7 +26,7 @@ Relationship:
 
 ### blogs
 
-Stores blog post records for blog CRUD. Comment API routes, likes, categories, and tags are not implemented yet.
+Stores blog post records for blog CRUD. Comment create and list routes are implemented. Comment update/delete routes, likes, categories, and tags are not implemented yet.
 
 | Column | Type | Constraints | Notes |
 | --- | --- | --- | --- |
@@ -48,7 +48,7 @@ Relationship:
 
 ### comments
 
-Stores comment records for blog posts. Comment API routes are not implemented yet.
+Stores comment records for blog posts. Comment create and list routes are implemented. Comment update and delete routes are not implemented yet.
 
 | Column | Type | Constraints | Notes |
 | --- | --- | --- | --- |

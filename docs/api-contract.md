@@ -23,7 +23,7 @@ http://127.0.0.1:3000
 
 Credentialed auth requests support JSON request bodies, the `Authorization` header, and refresh-token cookies.
 
-Public blog read requests do not require authentication. Authenticated blog create and update requests support JSON request bodies and the `Authorization` header.
+Public blog and comment read requests do not require authentication. Authenticated blog writes and comment creation support JSON request bodies and the `Authorization` header.
 
 ## Implemented Endpoints
 
@@ -481,9 +481,187 @@ Example:
 curl http://127.0.0.1:5000/blogs/my-first-post
 ```
 
+### GET /blogs/:slug/comments
+
+Returns comments for one published blog by slug. Draft blogs are not returned.
+
+Request body: none.
+
+Success response:
+
+```json
+{
+  "comments": [
+    {
+      "id": 1,
+      "content": "Great post.",
+      "authorId": 2,
+      "blogId": 1,
+      "createdAt": "2026-07-15T10:00:00",
+      "updatedAt": "2026-07-15T10:00:00",
+      "author": {
+        "id": 2,
+        "name": "Grace Hopper"
+      }
+    }
+  ]
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Ordering:
+
+- Comments are ordered by `createdAt` ascending, then by `id` ascending.
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_NOT_FOUND",
+    "message": "Blog was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+The not found response is returned when the slug does not exist or belongs to a draft blog.
+
+Example:
+
+```bash
+curl http://127.0.0.1:5000/blogs/my-first-post/comments
+```
+
+### POST /blogs/:slug/comments
+
+Creates a comment on one published blog for the current authenticated user. This endpoint only creates comment records; comment update and delete are not implemented yet.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Request body:
+
+```json
+{
+  "content": "Great post."
+}
+```
+
+Validation:
+
+- `content` is required and trimmed before storage.
+- `authorId` is set from the authenticated user and cannot be supplied by the client.
+- `blogId` is set from the published blog matching `:slug` and cannot be supplied by the client.
+
+Success response:
+
+```json
+{
+  "comment": {
+    "id": 1,
+    "content": "Great post.",
+    "authorId": 2,
+    "blogId": 1,
+    "createdAt": "2026-07-15T10:00:00",
+    "updatedAt": "2026-07-15T10:00:00",
+    "author": {
+      "id": 2,
+      "name": "Grace Hopper"
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+201 Created
+```
+
+Validation error response:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid comment request.",
+    "fields": {
+      "content": "Content is required."
+    }
+  }
+}
+```
+
+Status code:
+
+```text
+400 Bad Request
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_NOT_FOUND",
+    "message": "Blog was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+The not found response is returned when the slug does not exist or belongs to a draft blog.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:5000/blogs/my-first-post/comments \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Great post."}'
+```
+
 ### POST /blogs
 
-Creates a blog post for the current authenticated user. This endpoint only creates blog records; comments, likes, categories, and tags are not implemented yet.
+Creates a blog post for the current authenticated user. This endpoint only creates blog records; likes, categories, and tags are not implemented yet.
 
 Headers:
 
@@ -858,14 +1036,14 @@ Current status:
 
 Planned endpoints may include:
 
-- `GET /blogs/:id/comments`
-- `POST /blogs/:id/comments`
 - `DELETE /comments/:id`
 
 Current status:
 
-- Not implemented.
-- No comment model or persistence is implemented.
+- `GET /blogs/:slug/comments` is implemented and returns comments for one published blog.
+- `POST /blogs/:slug/comments` is implemented and requires a valid bearer access token.
+- Comment model and persistence are implemented.
+- Comment update and delete endpoints are not implemented.
 
 ## Notes
 
