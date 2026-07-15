@@ -46,7 +46,7 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 
 - `/` is a simple landing page with Login and Register entry points.
 - `/blogs` lists published blog posts from `GET /blogs` and shows a development-only `Create Blog` CTA when `localStorage` contains `miniblog.dev.accessToken`.
-- `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug` and shows author-only `Edit Blog` and `Delete Blog` actions when `GET /auth/me` matches the blog author.
+- `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug`, shows comments from `GET /blogs/:slug/comments`, allows authenticated users to post comments, and shows author-only `Edit Blog` and `Delete Blog` actions when `GET /auth/me` matches the blog author.
 - `/dashboard/blogs/new` creates a blog post with `POST /blogs` using the development access token.
 - `/dashboard/blogs/[slug]/edit` loads the blog and current user, then allows update/delete only when the current user is the blog author.
 - `/login` contains the login form and redirects to `/dashboard` after a successful login.
@@ -56,7 +56,7 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 ## Authentication Status
 
 Login and registration forms are wired to the backend auth endpoints through `src/lib/api/auth.ts`.
-Blog endpoint helpers live in `src/lib/api/blogs.ts` and use the same `NEXT_PUBLIC_API_BASE_URL`, JSON error parsing, credential mode, and bearer access-token pattern as the auth client.
+Blog endpoint helpers live in `src/lib/api/blogs.ts`, and comment endpoint helpers live in `src/lib/api/comments.ts`. They use the same `NEXT_PUBLIC_API_BASE_URL`, JSON error parsing, credential mode, and bearer access-token pattern as the auth client.
 
 For development only, a successful login stores the returned access token in `localStorage` under `miniblog.dev.accessToken` so the UI can reload the current user with `GET /auth/me`. This is not a production token-storage strategy. Refresh-token automation, durable session handling, and production auth hardening are not implemented yet.
 
@@ -99,6 +99,7 @@ apps/web/
 ├── src/lib/api/
 │   ├── auth.ts
 │   ├── blogs.ts
+│   ├── comments.ts
 │   └── client.ts
 ├── .env.example
 ├── eslint.config.mjs
@@ -111,7 +112,7 @@ apps/web/
 
 ## Current Limitations
 
-- Backend API integration currently includes auth helpers and a typed blog API client.
+- Backend API integration currently includes auth helpers, a typed blog API client, and a typed comments API client.
 - Auth UI uses development-only access-token storage.
-- Profile editing, dashboard blog listing, refresh-token automation, and comments are not implemented in the frontend yet.
+- Profile editing, dashboard blog listing, refresh-token automation, and comment edit/delete UI are not implemented in the frontend yet.
 - No frontend test runner is configured yet.

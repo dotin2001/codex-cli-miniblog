@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BlogOwnerActions } from "./blog-owner-actions";
+import { CommentsSection } from "./comments-section";
 import { ApiRequestError, getBlog } from "@/lib/api/blogs";
 import type { Blog } from "@/lib/api/blogs";
 
@@ -123,6 +124,7 @@ function BlogArticle({ blog }: { blog: Blog }) {
         </div>
       </div>
       <BlogOwnerActions blog={blog} />
+      <CommentsSection slug={blog.slug} />
     </article>
   );
 }
