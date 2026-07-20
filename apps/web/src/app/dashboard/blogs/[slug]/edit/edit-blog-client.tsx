@@ -10,7 +10,7 @@ import type { AuthUser } from "@/lib/api/auth";
 import {
   ApiRequestError,
   deleteBlog,
-  getBlog,
+  getMyBlog,
   updateBlog,
 } from "@/lib/api/blogs";
 import type { Blog, BlogStatus, UpdateBlogPayload } from "@/lib/api/blogs";
@@ -93,8 +93,13 @@ export function EditBlogClient({ slug }: { slug: string }) {
     let isMounted = true;
 
     async function loadBlog() {
+      if (!activeAccessToken) {
+        setBlogState({ blog: null, status: "loading" });
+        return;
+      }
+
       try {
-        const { blog } = await getBlog(slug);
+        const { blog } = await getMyBlog(slug, activeAccessToken);
 
         if (isMounted) {
           setBlogState({ blog, status: "ready" });
@@ -126,7 +131,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
     return () => {
       isMounted = false;
     };
-  }, [slug]);
+  }, [activeAccessToken, slug]);
 
   useEffect(() => {
     let isMounted = true;
@@ -203,7 +208,11 @@ export function EditBlogClient({ slug }: { slug: string }) {
         getPayload(formData),
         activeAccessToken,
       );
-      router.push(routes.blog(blog.slug));
+      router.push(
+        blog.status === "published"
+          ? routes.blog(blog.slug)
+          : routes.editBlog(blog.slug),
+      );
     } catch (error) {
       handleAuthenticatedError(error);
       setFormError(toFormError(error));
@@ -329,18 +338,6 @@ function EditBlogContent({
   onDelete: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  if (blogState.status === "loading" || currentUserState.status === "loading") {
-    return <LoadingState />;
-  }
-
-  if (blogState.status === "not-found") {
-    return <NotFoundState message={blogState.message} />;
-  }
-
-  if (blogState.status === "error") {
-    return <ErrorState message={blogState.message} />;
-  }
-
   if (!accessToken) {
     return (
       <UnauthenticatedState
@@ -352,6 +349,18 @@ function EditBlogContent({
         }
       />
     );
+  }
+
+  if (blogState.status === "loading" || currentUserState.status === "loading") {
+    return <LoadingState />;
+  }
+
+  if (blogState.status === "not-found") {
+    return <NotFoundState message={blogState.message} />;
+  }
+
+  if (blogState.status === "error") {
+    return <ErrorState message={blogState.message} />;
   }
 
   if (currentUserState.status === "error") {
@@ -439,7 +448,11 @@ function EditBlogForm({
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
             <Link
               className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-              href={routes.blog(blog.slug)}
+              href={
+                blog.status === "published"
+                  ? routes.blog(blog.slug)
+                  : routes.dashboard
+              }
             >
               Cancel
             </Link>

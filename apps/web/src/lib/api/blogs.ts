@@ -81,6 +81,16 @@ export function getBlog(slug: string): Promise<BlogResponse> {
   });
 }
 
+export function getMyBlog(
+  slug: string,
+  accessToken: string
+): Promise<BlogResponse> {
+  return request<BlogResponse>(`/blogs/${encodeURIComponent(slug)}/mine`, {
+    accessToken,
+    method: "GET"
+  });
+}
+
 export function createBlog(
   input: CreateBlogPayload,
   accessToken: string

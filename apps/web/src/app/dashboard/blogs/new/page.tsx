@@ -39,7 +39,11 @@ export default function NewBlogPage() {
 
     try {
       const { blog } = await createBlog(getPayload(formData), activeAccessToken);
-      router.push(routes.blog(blog.slug));
+      router.push(
+        blog.status === "published"
+          ? routes.blog(blog.slug)
+          : routes.editBlog(blog.slug),
+      );
     } catch (caughtError) {
       if (caughtError instanceof ApiRequestError && caughtError.status === 401) {
         window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);

@@ -1,5 +1,7 @@
+from datetime import datetime, timedelta, timezone
 import unittest
 
+import jwt
 from werkzeug.security import generate_password_hash
 
 from app import create_app
@@ -13,6 +15,7 @@ class TestConfig:
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = "test-jwt-secret"
+    JWT_ACCESS_TOKEN_EXPIRES_SECONDS = 900
 
 
 class ReadBlogEndpointTestCase(unittest.TestCase):
@@ -28,8 +31,15 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
                 password_hash=generate_password_hash("correct-horse-battery"),
             )
             db.session.add(author)
+            other_user = User(
+                name="Grace Hopper",
+                email="grace@example.com",
+                password_hash=generate_password_hash("correct-horse-battery"),
+            )
+            db.session.add(other_user)
             db.session.commit()
             self.author_id = author.id
+            self.other_user_id = other_user.id
 
     def tearDown(self):
         with self.app.app_context():
@@ -43,6 +53,7 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
         status=Blog.STATUS_PUBLISHED,
         excerpt=None,
         content="Blog content",
+        author_id=None,
     ):
         blog = Blog(
             title=title,
@@ -50,11 +61,26 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
             excerpt=excerpt,
             content=content,
             status=status,
-            author_id=self.author_id,
+            author_id=author_id or self.author_id,
         )
         db.session.add(blog)
         db.session.commit()
         return blog
+
+    def _access_token(self, user_id=None):
+        now = datetime.now(timezone.utc)
+        return jwt.encode(
+            {
+                "sub": str(user_id or self.author_id),
+                "iat": now,
+                "exp": now + timedelta(minutes=15),
+            },
+            TestConfig.JWT_SECRET_KEY,
+            algorithm="HS256",
+        )
+
+    def _auth_headers(self, user_id=None):
+        return {"Authorization": f"Bearer {self._access_token(user_id)}"}
 
     def test_list_blogs_returns_published_blogs_with_author_and_pagination(self):
         with self.app.app_context():
@@ -140,6 +166,99 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
             )
 
         response = self.client.get("/blogs/draft-detail")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "error": {
+                    "code": "BLOG_NOT_FOUND",
+                    "message": "Blog was not found.",
+                }
+            },
+        )
+
+    def test_private_detail_returns_draft_blog_for_author(self):
+        with self.app.app_context():
+            blog = self._add_blog(
+                title="Draft Detail",
+                slug="draft-detail",
+                status=Blog.STATUS_DRAFT,
+                excerpt="Draft summary",
+                content="Private draft content.",
+            )
+            blog_id = blog.id
+
+        response = self.client.get(
+            "/blogs/draft-detail/mine",
+            headers=self._auth_headers(),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {
+                "id": response.get_json()["blog"]["id"],
+                "title": response.get_json()["blog"]["title"],
+                "slug": response.get_json()["blog"]["slug"],
+                "excerpt": response.get_json()["blog"]["excerpt"],
+                "content": response.get_json()["blog"]["content"],
+                "status": response.get_json()["blog"]["status"],
+                "authorId": response.get_json()["blog"]["authorId"],
+            },
+            {
+                "id": blog_id,
+                "title": "Draft Detail",
+                "slug": "draft-detail",
+                "excerpt": "Draft summary",
+                "content": "Private draft content.",
+                "status": "draft",
+                "authorId": self.author_id,
+            },
+        )
+
+    def test_private_detail_requires_valid_bearer_token(self):
+        response = self.client.get("/blogs/draft-detail/mine")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "A valid bearer token is required.",
+                }
+            },
+        )
+
+    def test_private_detail_rejects_non_author(self):
+        with self.app.app_context():
+            self._add_blog(
+                title="Other Draft",
+                slug="other-draft",
+                status=Blog.STATUS_DRAFT,
+            )
+
+        response = self.client.get(
+            "/blogs/other-draft/mine",
+            headers=self._auth_headers(self.other_user_id),
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Only the blog author can view this blog.",
+                }
+            },
+        )
+
+    def test_private_detail_returns_not_found_for_missing_blog(self):
+        response = self.client.get(
+            "/blogs/missing-blog/mine",
+            headers=self._auth_headers(),
+        )
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(

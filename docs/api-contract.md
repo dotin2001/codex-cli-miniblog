@@ -481,6 +481,102 @@ Example:
 curl http://127.0.0.1:5000/blogs/my-first-post
 ```
 
+### GET /blogs/:slug/mine
+
+Returns one blog by slug for the current authenticated author. This endpoint can return draft or published blogs, but only when the current user authored the blog.
+
+Public blog read behavior is unchanged: `GET /blogs` and `GET /blogs/:slug` only return published blogs.
+
+Request body: none.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Success response:
+
+```json
+{
+  "blog": {
+    "id": 1,
+    "title": "My Draft Post",
+    "slug": "my-draft-post",
+    "excerpt": "A private draft summary.",
+    "content": "Draft content.",
+    "status": "draft",
+    "authorId": 1,
+    "createdAt": "2026-07-13T10:00:00",
+    "updatedAt": "2026-07-13T10:00:00"
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+Authorization error response:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Only the blog author can view this blog."
+  }
+}
+```
+
+Status code:
+
+```text
+403 Forbidden
+```
+
+Not found response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_NOT_FOUND",
+    "message": "Blog was not found."
+  }
+}
+```
+
+Status code:
+
+```text
+404 Not Found
+```
+
+Example:
+
+```bash
+curl http://127.0.0.1:5000/blogs/my-draft-post/mine \
+  -H "Authorization: Bearer <accessToken>"
+```
+
 ### GET /blogs/:slug/comments
 
 Returns comments for one published blog by slug. Draft blogs are not returned.
@@ -545,7 +641,7 @@ curl http://127.0.0.1:5000/blogs/my-first-post/comments
 
 ### POST /blogs/:slug/comments
 
-Creates a comment on one published blog for the current authenticated user. This endpoint only creates comment records; comment update and delete are not implemented yet.
+Creates a comment on one published blog for the current authenticated user.
 
 Headers:
 
@@ -1243,6 +1339,7 @@ Current status:
 
 - `GET /blogs` is implemented and returns published blogs with pagination.
 - `GET /blogs/:slug` is implemented and returns one published blog by slug.
+- `GET /blogs/:slug/mine` is implemented and only allows the blog author to fetch their own draft or published blog.
 - `POST /blogs` is implemented and requires a valid bearer access token.
 - `PATCH /blogs/:slug` is implemented and only allows the blog author to update.
 - `DELETE /blogs/:slug` is implemented and only allows the blog author to delete.
