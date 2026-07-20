@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { routes } from "@/lib/routes";
+
 const highlights = [
   {
     title: "Focused writing",
@@ -21,19 +23,19 @@ export default function Home() {
       <section className="bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 sm:px-8 lg:px-10">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col">
           <header className="flex items-center justify-between gap-4">
-            <Link href="/" className="text-xl font-bold tracking-tight text-purpleInk">
+            <Link href={routes.home} className="text-xl font-bold tracking-tight text-purpleInk">
               MiniBlog
             </Link>
             <nav aria-label="Primary navigation" className="flex items-center gap-3">
               <Link
                 className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-                href="/login"
+                href={routes.login}
               >
                 Login
               </Link>
               <Link
                 className="hidden min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 sm:inline-flex"
-                href="/register"
+                href={routes.register}
               >
                 Register
               </Link>
@@ -54,13 +56,13 @@ export default function Home() {
               <div className="mt-10 flex flex-col gap-3 sm:flex-row">
                 <Link
                   className="inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
-                  href="/login"
+                  href={routes.login}
                 >
                   Login
                 </Link>
                 <Link
                   className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-                  href="/register"
+                  href={routes.register}
                 >
                   Register
                 </Link>

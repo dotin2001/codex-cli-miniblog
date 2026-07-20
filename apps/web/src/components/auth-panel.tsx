@@ -13,6 +13,7 @@ import {
   logout,
   register
 } from "@/lib/api/auth";
+import { routes } from "@/lib/routes";
 
 type AuthFormError = {
   fields?: Record<string, string>;
@@ -45,7 +46,7 @@ export function LoginPanel() {
       });
 
       window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, response.accessToken);
-      router.push("/dashboard");
+      router.push(routes.dashboard);
     } catch (caughtError) {
       setError(toFormError(caughtError));
     } finally {
@@ -77,7 +78,7 @@ export function LoginPanel() {
       </form>
       <p className="mt-6 text-center text-sm text-slate-600">
         Need an account?{" "}
-        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href="/register">
+        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href={routes.register}>
           Register
         </Link>
       </p>
@@ -151,7 +152,7 @@ export function RegisterPanel() {
       </form>
       <p className="mt-6 text-center text-sm text-slate-600">
         Already registered?{" "}
-        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href="/login">
+        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href={routes.login}>
           Log in
         </Link>
       </p>
@@ -219,7 +220,7 @@ export function DashboardPanel() {
 
     try {
       await logout();
-      router.push("/login");
+      router.push(routes.login);
     } catch (caughtError) {
       setState({
         error: toFormError(caughtError),
@@ -250,7 +251,7 @@ export function DashboardPanel() {
         {state.error ? <AuthError error={state.error} /> : null}
         <Link
           className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
-          href="/login"
+          href={routes.login}
         >
           Go to login
         </Link>

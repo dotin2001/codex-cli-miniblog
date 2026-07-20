@@ -7,6 +7,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { ApiRequestError, getMe } from "@/lib/api/auth";
 import { deleteBlog } from "@/lib/api/blogs";
 import type { Blog } from "@/lib/api/blogs";
+import { routes } from "@/lib/routes";
 
 type OwnerActionState = "idle" | "checking" | "owner" | "not-owner";
 
@@ -78,7 +79,7 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
 
     try {
       await deleteBlog(blog.slug, activeAccessToken);
-      router.push("/blogs");
+      router.push(routes.blogs);
     } catch (caughtError) {
       if (caughtError instanceof ApiRequestError && caughtError.status === 401) {
         window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
@@ -102,7 +103,7 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
         <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:flex-row sm:items-center">
           <Link
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
-            href={`/dashboard/blogs/${blog.slug}/edit`}
+            href={routes.editBlog(blog.slug)}
           >
             Edit Blog
           </Link>

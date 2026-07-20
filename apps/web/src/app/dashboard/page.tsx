@@ -1,19 +1,20 @@
 import Link from "next/link";
 
 import { DashboardPanel } from "@/components/auth-panel";
+import { routes } from "@/lib/routes";
 
 export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-white px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold tracking-tight text-purpleInk">
+          <Link href={routes.home} className="text-xl font-bold tracking-tight text-purpleInk">
             MiniBlog
           </Link>
           <nav aria-label="Dashboard navigation" className="flex items-center gap-3">
             <Link
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-              href="/login"
+              href={routes.login}
             >
               Login
             </Link>
@@ -33,7 +34,7 @@ export default function DashboardPage() {
             </p>
             <Link
               className="mt-8 inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
-              href="/dashboard/blogs/new"
+              href={routes.createBlog}
             >
               Create New Blog
             </Link>

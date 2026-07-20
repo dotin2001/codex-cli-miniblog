@@ -1,18 +1,19 @@
 import Link from "next/link";
 
 import { LoginPanel } from "@/components/auth-panel";
+import { routes } from "@/lib/routes";
 
 export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_42%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold tracking-tight text-purpleInk">
+          <Link href={routes.home} className="text-xl font-bold tracking-tight text-purpleInk">
             MiniBlog
           </Link>
           <Link
             className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-            href="/register"
+            href={routes.register}
           >
             Register
           </Link>

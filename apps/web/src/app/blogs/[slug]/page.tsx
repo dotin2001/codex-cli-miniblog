@@ -5,6 +5,7 @@ import { BlogOwnerActions } from "./blog-owner-actions";
 import { CommentsSection } from "./comments-section";
 import { ApiRequestError, getBlog } from "@/lib/api/blogs";
 import type { Blog } from "@/lib/api/blogs";
+import { routes } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -67,13 +68,13 @@ function BlogDetailShell({ children }: { children: React.ReactNode }) {
     <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-4xl">
         <header className="flex items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold tracking-tight text-purpleInk">
+          <Link href={routes.home} className="text-xl font-bold tracking-tight text-purpleInk">
             MiniBlog
           </Link>
           <nav aria-label="Blog detail navigation" className="flex items-center gap-3">
             <Link
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-              href="/blogs"
+              href={routes.blogs}
             >
               All blogs
             </Link>
@@ -90,7 +91,7 @@ function BlogArticle({ blog }: { blog: Blog }) {
     <article className="py-12 sm:py-16">
       <Link
         className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-        href="/blogs"
+        href={routes.blogs}
       >
         Back to blogs
       </Link>

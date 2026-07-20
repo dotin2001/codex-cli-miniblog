@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CreateBlogCta } from "./create-blog-cta";
 import { ApiRequestError, getBlogs } from "@/lib/api/blogs";
 import type { Blog, Pagination } from "@/lib/api/blogs";
+import { routes } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -48,16 +49,19 @@ function BlogShell({ children }: { children: React.ReactNode }) {
     <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-6xl">
         <header className="flex items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold tracking-tight text-purpleInk">
+          <Link
+            href={routes.home}
+            className="text-xl font-bold tracking-tight text-purpleInk"
+          >
             MiniBlog
           </Link>
           <nav aria-label="Blog navigation" className="flex items-center gap-3">
             <CreateBlogCta />
             <Link
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-              href="/login"
+              href={routes.dashboard}
             >
-              Login
+              Account
             </Link>
           </nav>
         </header>
@@ -67,7 +71,13 @@ function BlogShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BlogList({ blogs, pagination }: { blogs: Blog[]; pagination: Pagination }) {
+function BlogList({
+  blogs,
+  pagination,
+}: {
+  blogs: Blog[];
+  pagination: Pagination;
+}) {
   return (
     <section className="py-12 sm:py-16">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -111,7 +121,10 @@ function BlogCard({ blog }: { blog: Blog }) {
         <time dateTime={blog.createdAt}>{formatDate(blog.createdAt)}</time>
       </div>
       <h2 className="mt-4 text-2xl font-bold tracking-normal text-slate-950">
-        <Link className="transition hover:text-purpleInk" href={`/blogs/${blog.slug}`}>
+        <Link
+          className="transition hover:text-purpleInk"
+          href={routes.blog(blog.slug)}
+        >
           {blog.title}
         </Link>
       </h2>
@@ -120,7 +133,7 @@ function BlogCard({ blog }: { blog: Blog }) {
       </p>
       <Link
         className="mt-6 inline-flex min-h-10 w-fit items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
-        href={`/blogs/${blog.slug}`}
+        href={routes.blog(blog.slug)}
       >
         Read post
       </Link>
@@ -147,8 +160,12 @@ function EmptyState() {
 function ErrorState({ message }: { message: string }) {
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-900 shadow-2xl shadow-red-950/5">
-      <p className="text-sm font-semibold uppercase tracking-wide">Unable to load blogs</p>
-      <h1 className="mt-3 text-3xl font-bold tracking-normal">Something went wrong.</h1>
+      <p className="text-sm font-semibold uppercase tracking-wide">
+        Unable to load blogs
+      </p>
+      <h1 className="mt-3 text-3xl font-bold tracking-normal">
+        Something went wrong.
+      </h1>
       <p className="mt-3 max-w-2xl text-base leading-7">{message}</p>
     </div>
   );
@@ -166,6 +183,6 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat("en", {
     day: "numeric",
     month: "short",
-    year: "numeric"
+    year: "numeric",
   }).format(new Date(value));
 }

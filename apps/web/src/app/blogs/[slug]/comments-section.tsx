@@ -13,6 +13,7 @@ import {
   updateComment
 } from "@/lib/api/comments";
 import type { Comment } from "@/lib/api/comments";
+import { routes } from "@/lib/routes";
 
 type CommentLoadState =
   | {
@@ -384,7 +385,7 @@ function CommentForm({
         <span>Log in to add your comment.</span>{" "}
         <Link
           className="font-semibold text-purpleInk transition hover:text-purple-950"
-          href="/login"
+          href={routes.login}
         >
           Go to login
         </Link>
