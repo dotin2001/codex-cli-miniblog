@@ -7,7 +7,12 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { ApiRequestError as AuthApiRequestError, getMe } from "@/lib/api/auth";
 import type { AuthUser } from "@/lib/api/auth";
-import { ApiRequestError, deleteBlog, getBlog, updateBlog } from "@/lib/api/blogs";
+import {
+  ApiRequestError,
+  deleteBlog,
+  getBlog,
+  updateBlog,
+} from "@/lib/api/blogs";
 import type { Blog, BlogStatus, UpdateBlogPayload } from "@/lib/api/blogs";
 import { routes } from "@/lib/routes";
 
@@ -73,11 +78,11 @@ export function EditBlogClient({ slug }: { slug: string }) {
   const [removedToken, setRemovedToken] = useState(false);
   const [blogState, setBlogState] = useState<BlogLoadState>({
     blog: null,
-    status: "loading"
+    status: "loading",
   });
   const [currentUserState, setCurrentUserState] = useState<CurrentUserState>({
     status: "idle",
-    user: null
+    user: null,
   });
   const [formError, setFormError] = useState<FormError | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -103,7 +108,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
           setBlogState({
             blog: null,
             message: "Blog was not found.",
-            status: "not-found"
+            status: "not-found",
           });
           return;
         }
@@ -111,7 +116,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
         setBlogState({
           blog: null,
           message: getErrorMessage(error),
-          status: "error"
+          status: "error",
         });
       }
     }
@@ -131,7 +136,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
         setCurrentUserState({
           message: "Log in to edit this blog post.",
           status: "unauthenticated",
-          user: null
+          user: null,
         });
         return;
       }
@@ -153,10 +158,11 @@ export function EditBlogClient({ slug }: { slug: string }) {
         if (isMounted) {
           setCurrentUserState({
             message: getAuthErrorMessage(error),
-            status: error instanceof AuthApiRequestError && error.status === 401
-              ? "unauthenticated"
-              : "error",
-            user: null
+            status:
+              error instanceof AuthApiRequestError && error.status === 401
+                ? "unauthenticated"
+                : "error",
+            user: null,
           });
         }
       }
@@ -192,7 +198,11 @@ export function EditBlogClient({ slug }: { slug: string }) {
     const formData = new FormData(event.currentTarget);
 
     try {
-      const { blog } = await updateBlog(slug, getPayload(formData), activeAccessToken);
+      const { blog } = await updateBlog(
+        slug,
+        getPayload(formData),
+        activeAccessToken,
+      );
       router.push(routes.blog(blog.slug));
     } catch (error) {
       handleAuthenticatedError(error);
@@ -220,7 +230,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
     }
 
     const confirmed = window.confirm(
-      "Delete this blog post? This action cannot be undone."
+      "Delete this blog post? This action cannot be undone.",
     );
 
     if (!confirmed) {
@@ -251,10 +261,16 @@ export function EditBlogClient({ slug }: { slug: string }) {
     <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-4xl">
         <header className="flex items-center justify-between gap-4">
-          <Link href={routes.home} className="text-xl font-bold tracking-tight text-purpleInk">
+          <Link
+            href={routes.blogs}
+            className="text-xl font-bold tracking-tight text-purpleInk"
+          >
             MiniBlog
           </Link>
-          <nav aria-label="Edit blog navigation" className="flex items-center gap-3">
+          <nav
+            aria-label="Edit blog navigation"
+            className="flex items-center gap-3"
+          >
             <Link
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
               href={routes.dashboard}
@@ -273,7 +289,8 @@ export function EditBlogClient({ slug }: { slug: string }) {
               Update a MiniBlog post.
             </h1>
             <p className="mt-5 text-base leading-8 text-slate-700 sm:text-lg">
-              Save changes or delete the post with the authenticated MiniBlog API.
+              Save changes or delete the post with the authenticated MiniBlog
+              API.
             </p>
           </div>
 
@@ -301,7 +318,7 @@ function EditBlogContent({
   isDeleting,
   isSaving,
   onDelete,
-  onSubmit
+  onSubmit,
 }: {
   accessToken: string | null;
   blogState: BlogLoadState;
@@ -327,7 +344,12 @@ function EditBlogContent({
   if (!accessToken) {
     return (
       <UnauthenticatedState
-        error={error ?? { message: currentUserState.message ?? "Log in to edit this blog post." }}
+        error={
+          error ?? {
+            message:
+              currentUserState.message ?? "Log in to edit this blog post.",
+          }
+        }
       />
     );
   }
@@ -361,7 +383,7 @@ function EditBlogForm({
   isDeleting,
   isSaving,
   onDelete,
-  onSubmit
+  onSubmit,
 }: {
   blog: Blog;
   error: FormError | null;
@@ -508,8 +530,12 @@ function ForbiddenState() {
 function ErrorState({ message }: { message: string }) {
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-900 shadow-2xl shadow-red-950/5">
-      <p className="text-sm font-semibold uppercase tracking-wide">Unable to load blog</p>
-      <h2 className="mt-3 text-3xl font-bold tracking-normal">Something went wrong.</h2>
+      <p className="text-sm font-semibold uppercase tracking-wide">
+        Unable to load blog
+      </p>
+      <h2 className="mt-3 text-3xl font-bold tracking-normal">
+        Something went wrong.
+      </h2>
       <p className="mt-3 max-w-2xl text-base leading-7">{message}</p>
     </div>
   );
@@ -521,7 +547,7 @@ function TextField({
   label,
   name,
   placeholder,
-  required = false
+  required = false,
 }: {
   defaultValue: string;
   error?: string;
@@ -541,7 +567,9 @@ function TextField({
         required={required}
         type="text"
       />
-      {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
+      {error ? (
+        <span className="mt-2 block text-sm text-red-700">{error}</span>
+      ) : null}
     </label>
   );
 }
@@ -553,7 +581,7 @@ function TextAreaField({
   name,
   placeholder,
   required = false,
-  rows
+  rows,
 }: {
   defaultValue: string;
   error?: string;
@@ -574,14 +602,16 @@ function TextAreaField({
         required={required}
         rows={rows}
       />
-      {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
+      {error ? (
+        <span className="mt-2 block text-sm text-red-700">{error}</span>
+      ) : null}
     </label>
   );
 }
 
 function StatusField({
   defaultValue,
-  error
+  error,
 }: {
   defaultValue: BlogStatus;
   error?: string;
@@ -597,7 +627,9 @@ function StatusField({
         <option value="draft">Draft</option>
         <option value="published">Published</option>
       </select>
-      {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
+      {error ? (
+        <span className="mt-2 block text-sm text-red-700">{error}</span>
+      ) : null}
     </label>
   );
 }
@@ -611,7 +643,11 @@ function FormErrorMessage({ error }: { error: FormError }) {
 }
 
 function useAccessToken(): string | null {
-  return useSyncExternalStore(subscribeToAccessToken, getAccessTokenSnapshot, () => null);
+  return useSyncExternalStore(
+    subscribeToAccessToken,
+    getAccessTokenSnapshot,
+    () => null,
+  );
 }
 
 function subscribeToAccessToken(onStoreChange: () => void): () => void {
@@ -631,7 +667,7 @@ function getPayload(formData: FormData): UpdateBlogPayload {
     content: getFormValue(formData, "content"),
     excerpt: getFormValue(formData, "excerpt").trim() || null,
     status: getStatus(formData),
-    title: getFormValue(formData, "title")
+    title: getFormValue(formData, "title"),
   };
 }
 
@@ -674,12 +710,12 @@ function toFormError(error: unknown): FormError {
   if (error instanceof ApiRequestError) {
     return {
       fields: error.fields,
-      message: error.message
+      message: error.message,
     };
   }
 
   return {
-    message: "Something went wrong. Try again."
+    message: "Something went wrong. Try again.",
   };
 }
 

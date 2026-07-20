@@ -50,7 +50,7 @@ function BlogShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto max-w-6xl">
         <header className="flex items-center justify-between gap-4">
           <Link
-            href={routes.home}
+            href={routes.blogs}
             className="text-xl font-bold tracking-tight text-purpleInk"
           >
             MiniBlog

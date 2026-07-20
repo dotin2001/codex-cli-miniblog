@@ -56,10 +56,16 @@ export default function NewBlogPage() {
     <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-4xl">
         <header className="flex items-center justify-between gap-4">
-          <Link href={routes.home} className="text-xl font-bold tracking-tight text-purpleInk">
+          <Link
+            href={routes.blogs}
+            className="text-xl font-bold tracking-tight text-purpleInk"
+          >
             MiniBlog
           </Link>
-          <nav aria-label="Create blog navigation" className="flex items-center gap-3">
+          <nav
+            aria-label="Create blog navigation"
+            className="flex items-center gap-3"
+          >
             <Link
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
               href={routes.dashboard}
@@ -87,7 +93,11 @@ export default function NewBlogPage() {
               error={error ?? { message: "Log in to create a blog post." }}
             />
           ) : (
-            <BlogForm error={error} isSubmitting={isSubmitting} onSubmit={handleSubmit} />
+            <BlogForm
+              error={error}
+              isSubmitting={isSubmitting}
+              onSubmit={handleSubmit}
+            />
           )}
         </section>
       </div>
