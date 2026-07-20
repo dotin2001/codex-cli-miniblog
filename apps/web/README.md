@@ -37,7 +37,7 @@ The dev server starts with Next.js at `http://localhost:3000` by default.
 Create `apps/web/.env.local` for local frontend configuration:
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
 ```
 
 `NEXT_PUBLIC_API_BASE_URL` is required by the frontend API client and should point to the MiniBlog backend origin without a trailing slash.
@@ -47,8 +47,8 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5000
 - `/` is a simple landing page with Login and Register entry points.
 - `/blogs` lists published blog posts from `GET /blogs` and shows a development-only `Create Blog` CTA when `localStorage` contains `miniblog.dev.accessToken`.
 - `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug`, shows comments from `GET /blogs/:slug/comments`, allows authenticated users to post comments, shows comment author-only edit/delete actions, and shows blog author-only `Edit Blog` and `Delete Blog` actions when `GET /auth/me` matches the blog author.
-- `/dashboard/blogs/new` creates a blog post with `POST /blogs` using the development access token.
-- `/dashboard/blogs/[slug]/edit` loads the blog and current user, then allows update/delete only when the current user is the blog author.
+- `/dashboard/blogs/new` creates a blog post with `POST /blogs` using the development access token. Draft posts redirect to the dashboard edit route; published posts redirect to the public detail route.
+- `/dashboard/blogs/[slug]/edit` loads the blog with `GET /blogs/:slug/mine`, loads the current user with `GET /auth/me`, and allows update/delete only when the current user is the blog author.
 - `/login` contains the login form and redirects to `/dashboard` after a successful login.
 - `/register` contains the registration form. Registration does not log the user in automatically.
 - `/dashboard` loads the authenticated user with `GET /auth/me` using the development access token and links to `/dashboard/blogs/new` with `Create New Blog`.
@@ -112,7 +112,6 @@ apps/web/
 
 ## Current Limitations
 
-- Backend API integration currently includes auth helpers, a typed blog API client, and a typed comments API client.
 - Auth UI uses development-only access-token storage.
 - Profile editing, dashboard blog listing, refresh-token automation, and comment moderation UI are not implemented in the frontend yet.
 - No frontend test runner is configured yet.

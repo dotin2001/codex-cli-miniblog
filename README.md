@@ -1,122 +1,156 @@
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# MiniBlog
 
-• Here is a ready-to-use README.md for the project:
+MiniBlog is a full-stack blog application with a Next.js frontend and a Flask backend.
 
-  # MiniBlog
+The current app implements local authentication, published blog browsing, authenticated blog CRUD, comments, author-only edit/delete rules, and a dashboard editing flow for draft and published posts.
 
-  MiniBlog is a full-stack blog application scaffold with a Next.js frontend and a Flask backend.
+## Project Structure
 
-  The project is currently in an early scaffold stage. The frontend renders a static MiniBlog shell, and the backend provides a minimal health check API.
+```text
+codex-cli-miniblog/
+├── apps/
+│   ├── web/      # Next.js frontend
+│   └── api/      # Flask backend
+├── docs/         # Architecture, API, auth, and database documentation
+├── .codex/       # Project context and agent skills
+└── README.md
+```
 
-  ## Project Structure
+## Stack
 
-  ```text
-  codex-cli-miniblog/
-  ├── apps/
-  │   ├── web/      # Next.js frontend
-  │   └── api/      # Flask backend
-  ├── docs/         # Architecture and API documentation
-  ├── .codex/       # Project context and agent skills
-  └── README.md
+Frontend:
 
-  ## Stack
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS
+- ESLint
 
-  ### Frontend
+Backend:
 
-  - Next.js 16
-  - React 19
-  - TypeScript
-  - Tailwind CSS
-  - ESLint
+- Python
+- Flask
+- Flask-SQLAlchemy
+- Flask-Migrate
+- PyJWT
+- PyMySQL
 
-  ### Backend
+Database:
 
-  - Python
-  - Flask
-  - Flask-SQLAlchemy-ready structure
+- Local MySQL 8.4 via Docker Compose
 
-  ## Local URLs
+## Local URLs
 
-  Frontend:
+Frontend:
 
-  http://localhost:3000
+```text
+http://localhost:3000
+```
 
-  Backend:
+Backend:
 
-  http://127.0.0.1:5000
+```text
+http://127.0.0.1:8080
+```
 
-  ## Frontend Setup
+## Environment
 
-  cd apps/web
-  npm install
-  npm run dev
+Backend local settings are based on the root example:
 
-  Run lint:
+```bash
+cp .env.example .env
+```
 
-  npm run lint
+Frontend local settings are based on:
 
-  Build with Node 20 or newer:
+```bash
+cp apps/web/.env.example apps/web/.env.local
+```
 
-  npm run build
+The frontend API base URL should match the local Flask run command:
 
-  ## Backend Setup
+```text
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
+```
 
-  cd apps/api
-  python3 -m venv .venv
-  source .venv/bin/activate
-  pip install -r requirements.txt
-  flask --app app run --debug
+## Backend Setup
 
-  ## Health Check
+```bash
+cd apps/api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-  curl http://127.0.0.1:5000/health
+Start MySQL from the project root:
 
-  Expected response:
+```bash
+docker compose up -d mysql
+```
 
-  {
-    "status": "ok"
-  }
+Apply migrations:
 
-  ## Current Status
+```bash
+cd apps/api
+set -a
+source ../../.env
+set +a
+flask --app app db upgrade
+```
 
-  Implemented:
+Run the API:
 
-  - Static frontend shell
-  - Next.js App Router structure
-  - Minimal Flask backend
-  - GET /health endpoint
-  - SQLAlchemy-ready backend extension structure
+```bash
+flask --app app run --debug --port 8080
+```
 
-  Not implemented yet:
+Health check:
 
-  - MySQL connection
-  - Authentication
-  - User profiles
-  - Blog CRUD
-  - Comments
-  - Frontend-to-backend API integration
-  - Database models and migrations
+```bash
+curl http://127.0.0.1:8080/health
+```
 
-  ## Documentation
+## Frontend Setup
 
-  See:
+```bash
+cd apps/web
+npm install
+npm run dev
+```
 
-  - docs/architecture.md
-  - docs/api-contract.md
-  - docs/auth-flow.md
-  - docs/database.md
+The frontend runs at `http://localhost:3000`.
 
-  ## Requirements
+## Implemented Features
 
-  Frontend requires:
+- User registration, login, logout, refresh-token cookie issuance, and `GET /auth/me`
+- Public blog list and public blog detail for published posts only
+- Authenticated blog create, update, delete, and author-only draft/published fetch for dashboard editing
+- Comment list/create/update/delete, with author-only edit/delete behavior
+- Frontend routes for home, login, register, dashboard, blog list, blog detail, create blog, and edit blog
+- Centralized frontend route helper in `apps/web/src/lib/routes.ts`
 
-  - Node.js >=20.9.0
-  - npm
+## Verification
 
-  Backend requires:
+Backend:
 
-  - Python 3
-  - Flask dependencies from apps/api/requirements.txt
+```bash
+cd apps/api
+python3 -B -m unittest discover -s tests
+```
 
+Frontend:
 
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────# codex-cli-miniblog
+```bash
+cd apps/web
+npm run lint
+npx tsc --noEmit --incremental false
+```
+
+## Documentation
+
+See:
+
+- `docs/architecture.md`
+- `docs/api-contract.md`
+- `docs/auth-flow.md`
+- `docs/database.md`

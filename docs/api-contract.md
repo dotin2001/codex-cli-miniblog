@@ -11,7 +11,7 @@ http://localhost:3000
 Backend:
 
 ```text
-http://127.0.0.1:5000
+http://127.0.0.1:8080
 ```
 
 Auth, blog, and comment endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
@@ -50,7 +50,7 @@ Status code:
 Example:
 
 ```bash
-curl http://127.0.0.1:5000/health
+curl http://127.0.0.1:8080/health
 ```
 
 ### POST /auth/register
@@ -133,7 +133,7 @@ Status code:
 Example:
 
 ```bash
-curl -X POST http://127.0.0.1:5000/auth/register \
+curl -X POST http://127.0.0.1:8080/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery"}'
 ```
@@ -231,7 +231,7 @@ Status code:
 Example:
 
 ```bash
-curl -X POST http://127.0.0.1:5000/auth/login \
+curl -X POST http://127.0.0.1:8080/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"ada@example.com","password":"correct-horse-battery"}'
 ```
@@ -284,7 +284,7 @@ The authentication error response is returned when the refresh-token cookie is m
 Example:
 
 ```bash
-curl -X POST http://127.0.0.1:5000/auth/refresh \
+curl -X POST http://127.0.0.1:8080/auth/refresh \
   --cookie "refreshToken=<refresh-token-jwt>"
 ```
 
@@ -311,7 +311,7 @@ Status code:
 Example:
 
 ```bash
-curl -X POST http://127.0.0.1:5000/auth/logout
+curl -X POST http://127.0.0.1:8080/auth/logout
 ```
 
 ### GET /auth/me
@@ -366,7 +366,7 @@ The authentication error response is returned when the `Authorization` header is
 Example:
 
 ```bash
-curl http://127.0.0.1:5000/auth/me \
+curl http://127.0.0.1:8080/auth/me \
   -H "Authorization: Bearer <accessToken>"
 ```
 
@@ -419,7 +419,7 @@ Status code:
 Example:
 
 ```bash
-curl "http://127.0.0.1:5000/blogs?page=1&perPage=10"
+curl "http://127.0.0.1:8080/blogs?page=1&perPage=10"
 ```
 
 ### GET /blogs/:slug
@@ -478,7 +478,7 @@ The not found response is returned when the slug does not exist or belongs to a 
 Example:
 
 ```bash
-curl http://127.0.0.1:5000/blogs/my-first-post
+curl http://127.0.0.1:8080/blogs/my-first-post
 ```
 
 ### GET /blogs/:slug/mine
@@ -573,7 +573,7 @@ Status code:
 Example:
 
 ```bash
-curl http://127.0.0.1:5000/blogs/my-draft-post/mine \
+curl http://127.0.0.1:8080/blogs/my-draft-post/mine \
   -H "Authorization: Bearer <accessToken>"
 ```
 
@@ -636,7 +636,7 @@ The not found response is returned when the slug does not exist or belongs to a 
 Example:
 
 ```bash
-curl http://127.0.0.1:5000/blogs/my-first-post/comments
+curl http://127.0.0.1:8080/blogs/my-first-post/comments
 ```
 
 ### POST /blogs/:slug/comments
@@ -749,7 +749,7 @@ The not found response is returned when the slug does not exist or belongs to a 
 Example:
 
 ```bash
-curl -X POST http://127.0.0.1:5000/blogs/my-first-post/comments \
+curl -X POST http://127.0.0.1:8080/blogs/my-first-post/comments \
   -H "Authorization: Bearer <accessToken>" \
   -H "Content-Type: application/json" \
   -d '{"content":"Great post."}'
@@ -879,7 +879,7 @@ Status code:
 Example:
 
 ```bash
-curl -X PATCH http://127.0.0.1:5000/comments/1 \
+curl -X PATCH http://127.0.0.1:8080/comments/1 \
   -H "Authorization: Bearer <accessToken>" \
   -H "Content-Type: application/json" \
   -d '{"content":"Updated comment."}'
@@ -967,7 +967,7 @@ Status code:
 Example:
 
 ```bash
-curl -X DELETE http://127.0.0.1:5000/comments/1 \
+curl -X DELETE http://127.0.0.1:8080/comments/1 \
   -H "Authorization: Bearer <accessToken>"
 ```
 
@@ -1070,7 +1070,7 @@ The authentication error response is returned when the `Authorization` header is
 Example:
 
 ```bash
-curl -X POST http://127.0.0.1:5000/blogs \
+curl -X POST http://127.0.0.1:8080/blogs \
   -H "Authorization: Bearer <accessToken>" \
   -H "Content-Type: application/json" \
   -d '{"title":"My First Post!","content":"Hello from MiniBlog.","status":"draft"}'
@@ -1208,7 +1208,7 @@ Status code:
 Example:
 
 ```bash
-curl -X PATCH http://127.0.0.1:5000/blogs/my-first-post \
+curl -X PATCH http://127.0.0.1:8080/blogs/my-first-post \
   -H "Authorization: Bearer <accessToken>" \
   -H "Content-Type: application/json" \
   -d '{"title":"Updated Post Title","status":"published"}'
@@ -1296,7 +1296,7 @@ Status code:
 Example:
 
 ```bash
-curl -X DELETE http://127.0.0.1:5000/blogs/my-first-post \
+curl -X DELETE http://127.0.0.1:8080/blogs/my-first-post \
   -H "Authorization: Bearer <accessToken>"
 ```
 

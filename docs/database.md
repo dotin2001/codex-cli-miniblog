@@ -8,7 +8,7 @@ The first application tables are `users`, `blogs`, and `comments`.
 
 ### users
 
-Stores user account records for authentication flows. Registration stores secure password hashes. Login verifies those hashes. JWT behavior, refresh tokens, and session cookies are not implemented yet.
+Stores user account records for authentication flows. Registration stores secure password hashes. Login verifies those hashes and issues JWT access tokens plus an HTTP-only refresh-token cookie.
 
 | Column | Type | Constraints | Notes |
 | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ Stores blog post records for blog CRUD. Comment create, list, update, and delete
 | `slug` | string(255) | not null, unique, indexed | URL-friendly unique blog identifier. |
 | `excerpt` | string(500) | nullable | Short summary text for previews. |
 | `content` | text | not null | Main blog post body. |
-| `status` | string(20) | not null, default `draft`, check `draft` or `published` | Publication state for future CRUD workflows. |
+| `status` | string(20) | not null, default `draft`, check `draft` or `published` | Publication state used by public reads and dashboard editing. |
 | `author_id` | integer | not null, foreign key to `users.id` | User who authored the blog post. |
 | `created_at` | datetime | not null, default current timestamp | Record creation timestamp. |
 | `updated_at` | datetime | not null, default current timestamp | Record update timestamp. |
@@ -111,13 +111,13 @@ pip install -r requirements.txt
 Run the API:
 
 ```bash
-flask --app app run --debug
+flask --app app run --debug --port 8080
 ```
 
 Verify the existing health endpoint:
 
 ```bash
-curl http://127.0.0.1:5000/health
+curl http://127.0.0.1:8080/health
 ```
 
 Expected response:

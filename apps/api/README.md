@@ -1,6 +1,15 @@
 # MiniBlog API
 
-Minimal Flask API scaffold for the MiniBlog backend.
+Flask API for the MiniBlog backend.
+
+## Stack
+
+- Flask
+- Flask-Cors
+- Flask-SQLAlchemy
+- Flask-Migrate
+- PyJWT
+- PyMySQL
 
 ## Setup
 
@@ -28,24 +37,42 @@ mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3306/miniblog
 
 The Flask app reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and finally falls back to the default local database URL.
 
-Auth endpoints allow credentialed CORS requests from the local Next.js frontend origins configured by `CORS_ORIGINS`:
+Auth, blog, and comment endpoints allow credentialed CORS requests from the local Next.js frontend origins configured by `CORS_ORIGINS`:
 
 ```text
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
 
+## Database
+
+Apply migrations after MySQL is running:
+
+```bash
+cd apps/api
+set -a
+source ../../.env
+set +a
+flask --app app db upgrade
+```
+
+Migration files live in `apps/api/migrations`.
+
 ## Run
 
 ```bash
-flask --app app run --debug
+flask --app app run --debug --port 8080
 ```
 
-The API will be available at `http://127.0.0.1:5000`.
+The API will be available at:
+
+```text
+http://127.0.0.1:8080
+```
 
 ## Health Check
 
 ```bash
-curl http://127.0.0.1:5000/health
+curl http://127.0.0.1:8080/health
 ```
 
 Expected response:
@@ -56,20 +83,42 @@ Expected response:
 }
 ```
 
+## Implemented Endpoints
+
+Health:
+
+- `GET /health`
+
+Auth:
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /auth/me`
+
+Blogs:
+
+- `GET /blogs`
+- `GET /blogs/<slug>`
+- `GET /blogs/<slug>/mine`
+- `POST /blogs`
+- `PATCH /blogs/<slug>`
+- `DELETE /blogs/<slug>`
+
+Comments:
+
+- `GET /blogs/<slug>/comments`
+- `POST /blogs/<slug>/comments`
+- `PATCH /comments/<comment_id>`
+- `DELETE /comments/<comment_id>`
+
+Public blog read endpoints return published blogs only. Authenticated blog write endpoints and `GET /blogs/<slug>/mine` enforce author-only access where required.
+
 ## Verify
 
 ```bash
-python3 -m compileall app
+python3 -B -m unittest discover -s tests
 ```
 
-Apply database migrations after MySQL is running:
-
-```bash
-cd apps/api
-set -a
-source ../../.env
-set +a
-flask --app app db upgrade
-```
-
-Database models, auth, blog routes, and comment routes are intentionally not implemented yet. SQLAlchemy and Flask-Migrate are configured against the local MySQL URI.
+The backend test suite uses Flask's test client with an in-memory SQLite database.
