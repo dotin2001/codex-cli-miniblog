@@ -75,6 +75,16 @@ export function getBlogs(params: BlogListParams = {}): Promise<BlogListResponse>
   });
 }
 
+export function getMyBlogs(
+  params: BlogListParams = {},
+  accessToken: string
+): Promise<BlogListResponse> {
+  return request<BlogListResponse>(withQuery("/me/blogs", params), {
+    accessToken,
+    method: "GET"
+  });
+}
+
 export function getBlog(slug: string): Promise<BlogResponse> {
   return request<BlogResponse>(`/blogs/${encodeURIComponent(slug)}`, {
     method: "GET"

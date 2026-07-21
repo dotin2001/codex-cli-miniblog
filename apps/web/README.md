@@ -47,6 +47,7 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
 - `/` is a simple landing page with Login and Register entry points.
 - `/blogs` lists published blog posts from `GET /blogs` and shows a development-only `Create Blog` CTA when `localStorage` contains `miniblog.dev.accessToken`.
 - `/blogs/[slug]` displays one published blog post from `GET /blogs/:slug`, shows comments from `GET /blogs/:slug/comments`, allows authenticated users to post comments, shows comment author-only edit/delete actions, and shows blog author-only `Edit Blog` and `Delete Blog` actions when `GET /auth/me` matches the blog author.
+- `/dashboard/blogs` lists the authenticated user's draft and published blog posts from `GET /me/blogs`, with create, view, edit, and delete actions.
 - `/dashboard/blogs/new` creates a blog post with `POST /blogs` using the development access token. Draft posts redirect to the dashboard edit route; published posts redirect to the public detail route.
 - `/dashboard/blogs/[slug]/edit` loads the blog with `GET /blogs/:slug/mine`, loads the current user with `GET /auth/me`, and allows update/delete only when the current user is the blog author.
 - `/login` contains the login form and redirects to `/dashboard` after a successful login.
@@ -88,6 +89,7 @@ apps/web/
 │   ├── dashboard/
 │   │   └── blogs/
 │   │       ├── [slug]/
+│   │       ├── page.tsx
 │   │       └── new/
 │   ├── blogs/
 │   │   └── [slug]/
@@ -113,5 +115,5 @@ apps/web/
 ## Current Limitations
 
 - Auth UI uses development-only access-token storage.
-- Profile editing, dashboard blog listing, refresh-token automation, and comment moderation UI are not implemented in the frontend yet.
+- Profile editing, refresh-token automation, and comment moderation UI are not implemented in the frontend yet.
 - No frontend test runner is configured yet.
