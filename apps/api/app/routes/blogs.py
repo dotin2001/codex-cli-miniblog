@@ -13,6 +13,7 @@ from app.models.comment import Comment
 from app.models.user import User
 
 blogs_bp = Blueprint("blogs", __name__, url_prefix="/blogs")
+me_bp = Blueprint("me", __name__, url_prefix="/me")
 
 SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 VALID_STATUSES = {Blog.STATUS_DRAFT, Blog.STATUS_PUBLISHED}
@@ -446,6 +447,36 @@ def list_comments(slug: str):
 
     return jsonify(
         {"comments": [_serialize_comment(comment) for comment in comments]}
+    ), 200
+
+
+@me_bp.get("/blogs")
+def list_my_blogs():
+    user = _current_user_from_authorization_header()
+    if user is None:
+        return _authentication_error()
+
+    page = _pagination_value("page", DEFAULT_PAGE)
+    per_page = _pagination_value("perPage", DEFAULT_PER_PAGE, MAX_PER_PAGE)
+    query = (
+        Blog.query.options(joinedload(Blog.author))
+        .filter_by(author_id=user.id)
+        .order_by(Blog.created_at.desc(), Blog.id.desc())
+    )
+    total = query.count()
+    blogs = query.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = (total + per_page - 1) // per_page
+
+    return jsonify(
+        {
+            "blogs": [_serialize_public_blog(blog) for blog in blogs],
+            "pagination": {
+                "page": page,
+                "perPage": per_page,
+                "total": total,
+                "totalPages": total_pages,
+            },
+        }
     ), 200
 
 

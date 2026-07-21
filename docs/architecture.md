@@ -66,10 +66,11 @@ Implemented backend route groups:
 
 - `GET /health`
 - Auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`
+- Me: `GET /me/blogs`
 - Blogs: `GET /blogs`, `GET /blogs/<slug>`, `GET /blogs/<slug>/mine`, `POST /blogs`, `PATCH /blogs/<slug>`, `DELETE /blogs/<slug>`
 - Comments: `GET /blogs/<slug>/comments`, `POST /blogs/<slug>/comments`, `PATCH /comments/<comment_id>`, `DELETE /comments/<comment_id>`
 
-Public blog read routes only return published blogs. Authenticated blog write routes can act on draft or published blogs when the current user is the author. `GET /blogs/<slug>/mine` is the dashboard author-only read route for drafts and published posts.
+Public blog read routes only return published blogs. `GET /me/blogs` returns the current authenticated user's draft and published blogs. Authenticated blog write routes can act on draft or published blogs when the current user is the author. `GET /blogs/<slug>/mine` is the dashboard author-only read route for drafts and published posts.
 
 Comment reads and creates are scoped to published blogs. Comment update and delete require a valid bearer access token and only allow the comment author.
 

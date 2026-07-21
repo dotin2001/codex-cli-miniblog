@@ -23,7 +23,7 @@ http://127.0.0.1:3000
 
 Credentialed auth requests support JSON request bodies, the `Authorization` header, and refresh-token cookies.
 
-Public blog and comment read requests do not require authentication. Authenticated blog writes and comment writes support JSON request bodies and the `Authorization` header.
+Public blog and comment read requests do not require authentication. Authenticated user blog reads, blog writes, and comment writes support JSON request bodies where needed and the `Authorization` header.
 
 ## Implemented Endpoints
 
@@ -367,6 +367,88 @@ Example:
 
 ```bash
 curl http://127.0.0.1:8080/auth/me \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+### GET /me/blogs
+
+Returns blogs authored by the current authenticated user with basic pagination. Draft and published blogs are included. Blogs authored by other users are not included.
+
+Public blog read behavior is unchanged: `GET /blogs` and `GET /blogs/:slug` only return published blogs.
+
+Request body: none.
+
+Headers:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Query parameters:
+
+- `page` is optional and defaults to `1`.
+- `perPage` is optional and defaults to `10`.
+- `perPage` is capped at `50`.
+
+Success response:
+
+```json
+{
+  "blogs": [
+    {
+      "id": 1,
+      "title": "My Draft Post",
+      "slug": "my-draft-post",
+      "excerpt": "A private draft summary.",
+      "content": "Draft content.",
+      "status": "draft",
+      "authorId": 1,
+      "createdAt": "2026-07-13T10:00:00",
+      "updatedAt": "2026-07-13T10:00:00",
+      "author": {
+        "id": 1,
+        "name": "Ada Lovelace"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "perPage": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Status code:
+
+```text
+200 OK
+```
+
+Authentication error response:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "A valid bearer token is required."
+  }
+}
+```
+
+Status code:
+
+```text
+401 Unauthorized
+```
+
+The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
+
+Example:
+
+```bash
+curl "http://127.0.0.1:8080/me/blogs?page=1&perPage=10" \
   -H "Authorization: Bearer <accessToken>"
 ```
 
@@ -1340,6 +1422,7 @@ Current status:
 - `GET /blogs` is implemented and returns published blogs with pagination.
 - `GET /blogs/:slug` is implemented and returns one published blog by slug.
 - `GET /blogs/:slug/mine` is implemented and only allows the blog author to fetch their own draft or published blog.
+- `GET /me/blogs` is implemented and returns the current authenticated user's draft and published blogs with pagination.
 - `POST /blogs` is implemented and requires a valid bearer access token.
 - `PATCH /blogs/:slug` is implemented and only allows the blog author to update.
 - `DELETE /blogs/:slug` is implemented and only allows the blog author to delete.

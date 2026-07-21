@@ -54,6 +54,7 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
         excerpt=None,
         content="Blog content",
         author_id=None,
+        created_at=None,
     ):
         blog = Blog(
             title=title,
@@ -63,6 +64,10 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
             status=status,
             author_id=author_id or self.author_id,
         )
+        if created_at is not None:
+            blog.created_at = created_at
+            blog.updated_at = created_at
+
         db.session.add(blog)
         db.session.commit()
         return blog
@@ -269,6 +274,130 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
                     "message": "Blog was not found.",
                 }
             },
+        )
+
+    def test_my_blogs_requires_valid_bearer_token(self):
+        response = self.client.get("/me/blogs")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "A valid bearer token is required.",
+                }
+            },
+        )
+
+    def test_my_blogs_returns_owned_draft_and_published_blogs(self):
+        with self.app.app_context():
+            self._add_blog(
+                title="Owned Draft",
+                slug="owned-draft",
+                status=Blog.STATUS_DRAFT,
+            )
+            self._add_blog(
+                title="Owned Published",
+                slug="owned-published",
+                status=Blog.STATUS_PUBLISHED,
+            )
+
+        response = self.client.get("/me/blogs", headers=self._auth_headers())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {blog["slug"]: blog["status"] for blog in response.get_json()["blogs"]},
+            {
+                "owned-draft": "draft",
+                "owned-published": "published",
+            },
+        )
+        self.assertEqual(
+            {blog["author"]["id"] for blog in response.get_json()["blogs"]},
+            {self.author_id},
+        )
+
+    def test_my_blogs_excludes_other_users_blogs(self):
+        with self.app.app_context():
+            self._add_blog(title="Owned Blog", slug="owned-blog")
+            self._add_blog(
+                title="Other User Blog",
+                slug="other-user-blog",
+                author_id=self.other_user_id,
+            )
+
+        response = self.client.get("/me/blogs", headers=self._auth_headers())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["owned-blog"],
+        )
+
+    def test_my_blogs_returns_pagination_metadata(self):
+        with self.app.app_context():
+            for index in range(3):
+                self._add_blog(title=f"Owned Blog {index}", slug=f"owned-blog-{index}")
+
+        response = self.client.get(
+            "/me/blogs?page=2&perPage=2",
+            headers=self._auth_headers(),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json()["pagination"],
+            {
+                "page": 2,
+                "perPage": 2,
+                "total": 3,
+                "totalPages": 2,
+            },
+        )
+        self.assertEqual(len(response.get_json()["blogs"]), 1)
+
+    def test_my_blogs_sorts_newest_first(self):
+        now = datetime.now(timezone.utc)
+        with self.app.app_context():
+            self._add_blog(
+                title="Old Blog",
+                slug="old-blog",
+                created_at=now - timedelta(days=1),
+            )
+            self._add_blog(
+                title="New Blog",
+                slug="new-blog",
+                created_at=now,
+            )
+
+        response = self.client.get("/me/blogs", headers=self._auth_headers())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["new-blog", "old-blog"],
+        )
+
+    def test_public_list_remains_published_only_after_my_blogs_endpoint(self):
+        with self.app.app_context():
+            self._add_blog(
+                title="Public Draft",
+                slug="public-draft",
+                status=Blog.STATUS_DRAFT,
+            )
+            self._add_blog(
+                title="Public Published",
+                slug="public-published",
+                status=Blog.STATUS_PUBLISHED,
+            )
+
+        response = self.client.get("/blogs")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["public-published"],
         )
 
 
