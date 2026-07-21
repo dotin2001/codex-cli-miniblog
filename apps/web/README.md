@@ -52,7 +52,7 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
 - `/dashboard/blogs/[slug]/edit` loads the blog with `GET /blogs/:slug/mine`, loads the current user with `GET /auth/me`, and allows update/delete only when the current user is the blog author.
 - `/login` contains the login form and redirects to `/dashboard` after a successful login.
 - `/register` contains the registration form. Registration does not log the user in automatically.
-- `/dashboard` loads the authenticated user with `GET /auth/me` using the development access token and links to `/dashboard/blogs/new` with `Create New Blog`.
+- `/dashboard` loads the authenticated user with `GET /auth/me` using the development access token and links to `/dashboard/blogs` and `/dashboard/blogs/new`.
 
 ## Authentication Status
 
