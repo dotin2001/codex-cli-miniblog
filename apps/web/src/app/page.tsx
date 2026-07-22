@@ -1,6 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { routes } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "Home",
+  description:
+    "Read public posts, create an account, and start sharing concise stories on MiniBlog."
+};
 
 const highlights = [
   {

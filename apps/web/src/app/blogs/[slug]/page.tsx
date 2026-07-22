@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { BlogOwnerActions } from "./blog-owner-actions";
@@ -8,6 +9,8 @@ import type { Blog } from "@/lib/api/blogs";
 import { routes } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
+
+const BLOG_DESCRIPTION_MAX_LENGTH = 160;
 
 type BlogDetailPageProps = {
   params: Promise<{
@@ -21,20 +24,63 @@ type BlogDetailState =
       status: "success";
     }
   | {
-      status: "not-found";
-    }
-  | {
       message: string;
       status: "error";
     };
 
+export async function generateMetadata({
+  params
+}: BlogDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+
+  try {
+    const { blog } = await getBlog(slug);
+    const description = getBlogDescription(blog);
+    const authorName = blog.author?.name;
+
+    return {
+      title: blog.title,
+      description,
+      openGraph: {
+        title: blog.title,
+        description,
+        type: "article",
+        ...(authorName ? { authors: [authorName] } : {}),
+        ...(blog.createdAt ? { publishedTime: blog.createdAt } : {}),
+        ...(blog.updatedAt ? { modifiedTime: blog.updatedAt } : {})
+      },
+      twitter: {
+        card: "summary",
+        title: blog.title,
+        description
+      }
+    };
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return {
+        title: "Blog not found",
+        description: "This MiniBlog post is not available.",
+        robots: {
+          index: false,
+          follow: false
+        }
+      };
+    }
+
+    return {
+      title: "Blog unavailable",
+      description: "This MiniBlog post could not be loaded right now.",
+      robots: {
+        index: false,
+        follow: false
+      }
+    };
+  }
+}
+
 export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
   const { slug } = await params;
   const state = await loadBlog(slug);
-
-  if (state.status === "not-found") {
-    notFound();
-  }
 
   return (
     <BlogDetailShell>
@@ -56,7 +102,7 @@ async function loadBlog(slug: string): Promise<BlogDetailState> {
     return { blog, status: "success" };
   } catch (error) {
     if (isNotFoundError(error)) {
-      return { status: "not-found" };
+      notFound();
     }
 
     return { message: getErrorMessage(error), status: "error" };
@@ -153,6 +199,20 @@ function getErrorMessage(error: unknown): string {
   }
 
   return "The blog post could not be loaded. Try again later.";
+}
+
+function getBlogDescription(blog: Blog): string {
+  return truncateDescription(blog.excerpt?.trim() || blog.content);
+}
+
+function truncateDescription(value: string): string {
+  const normalizedValue = value.replace(/\s+/g, " ").trim();
+
+  if (normalizedValue.length <= BLOG_DESCRIPTION_MAX_LENGTH) {
+    return normalizedValue;
+  }
+
+  return `${normalizedValue.slice(0, BLOG_DESCRIPTION_MAX_LENGTH - 1).trimEnd()}...`;
 }
 
 function formatDate(value: string): string {

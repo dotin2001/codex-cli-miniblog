@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { CreateBlogCta } from "./create-blog-cta";
 import { ApiRequestError, getBlogs } from "@/lib/api/blogs";
@@ -6,6 +7,12 @@ import type { Blog, Pagination } from "@/lib/api/blogs";
 import { routes } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Published Posts",
+  description:
+    "Browse the latest published posts and stories shared by MiniBlog authors."
+};
 
 type BlogListState =
   | {

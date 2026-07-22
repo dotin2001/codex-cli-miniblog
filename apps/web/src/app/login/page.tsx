@@ -1,7 +1,17 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { LoginPanel } from "@/components/auth-panel";
 import { routes } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "Log in",
+  description: "Log in to your MiniBlog account and continue writing.",
+  robots: {
+    index: false,
+    follow: false
+  }
+};
 
 export default function LoginPage() {
   return (

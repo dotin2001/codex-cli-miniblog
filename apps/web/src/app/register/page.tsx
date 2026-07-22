@@ -1,7 +1,17 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { RegisterPanel } from "@/components/auth-panel";
 import { routes } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "Register",
+  description: "Create a MiniBlog account and start sharing focused posts.",
+  robots: {
+    index: false,
+    follow: false
+  }
+};
 
 export default function RegisterPage() {
   return (
