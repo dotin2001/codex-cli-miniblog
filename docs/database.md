@@ -68,14 +68,15 @@ Relationship:
 
 ## Local MySQL
 
-The root `docker-compose.yml` defines one MySQL 8.4 service:
+The root `docker-compose.yml` defines one MySQL 8.0 service:
 
 - Service: `mysql`
-- Container: `miniblog-mysql`
+- Container: `codex_cli_miniblog_mysql`
 - Database: `miniblog`
 - User: `miniblog`
-- Host port: `3306`
-- Data volume: `mysql_data`
+- Host port: `3307`
+- Container port: `3306`
+- Data volume: `codex_cli_miniblog_data`
 
 Use `.env.example` as the template for local settings:
 
@@ -89,13 +90,21 @@ Start MySQL from the project root:
 docker compose up -d mysql
 ```
 
-The local Flask database URI is:
+When running Flask, migrations, or other tools on the host machine, use the Compose host port:
 
 ```text
-mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3306/miniblog
+mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3307/miniblog
 ```
 
-The backend reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and falls back to that local URI when neither variable is set.
+When running an application container on the Docker Compose network, use the MySQL service name and container port:
+
+```text
+mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
+```
+
+The host URI uses `127.0.0.1:3307` because Docker publishes container port `3306` on host port `3307`. The container URI uses `mysql:3306` because containers resolve the Compose service name directly on the Docker network and connect to MySQL's internal port.
+
+The backend reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local URI when neither variable is set. Use `.env.example` for the documented host-machine setup, and switch `DATABASE_URL` to the `mysql:3306` form when running the API as a container.
 
 ## Backend Setup
 

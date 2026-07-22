@@ -37,7 +37,7 @@ Backend:
 
 Database:
 
-- Local MySQL 8.4 via Docker Compose
+- Local MySQL 8.0 via Docker Compose
 
 ## Local URLs
 
@@ -86,6 +86,18 @@ Start MySQL from the project root:
 
 ```bash
 docker compose up -d mysql
+```
+
+For host-machine development, keep `DATABASE_URL` pointed at the Compose host port:
+
+```text
+mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3307/miniblog
+```
+
+For Docker-network/container usage, use the Compose service name and MySQL container port:
+
+```text
+mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 ```
 
 Apply migrations:

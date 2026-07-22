@@ -29,13 +29,19 @@ docker compose up -d mysql
 cd apps/api
 ```
 
-The default local database URL is:
+When running Flask on the host machine, use the Compose host port:
 
 ```text
-mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3306/miniblog
+mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3307/miniblog
 ```
 
-The Flask app reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and finally falls back to the default local database URL.
+When running an app container on the Docker Compose network, use the MySQL service name and container port:
+
+```text
+mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
+```
+
+The Flask app reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and finally falls back to its built-in local database URL. Copy `.env.example` to `.env` for the documented host-machine setup.
 
 Auth, blog, current-user, and comment endpoints allow credentialed CORS requests from the local Next.js frontend origins configured by `CORS_ORIGINS`:
 
