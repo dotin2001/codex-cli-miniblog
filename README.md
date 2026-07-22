@@ -143,7 +143,7 @@ Frontend:
 ```bash
 cd apps/web
 npm run lint
-npx tsc --noEmit --incremental false
+npm run typecheck
 ```
 
 ## Documentation

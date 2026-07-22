@@ -70,6 +70,14 @@ For development only, a successful login stores the returned access token in `lo
 npm run lint
 ```
 
+## Typecheck
+
+```bash
+npm run typecheck
+```
+
+The typecheck script runs Next.js route type generation before TypeScript and checks only the production route types. This keeps the standalone TypeScript check reliable after `next dev` has generated `.next/dev/types`.
+
 ## Build
 
 Use Node 20 or newer:

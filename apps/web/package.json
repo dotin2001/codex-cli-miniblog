@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --project tsconfig.typecheck.json --noEmit --incremental false"
   },
   "engines": {
     "node": ">=20.9.0"
