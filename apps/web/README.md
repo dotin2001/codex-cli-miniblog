@@ -38,9 +38,12 @@ Create `apps/web/.env.local` for local frontend configuration:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 `NEXT_PUBLIC_API_BASE_URL` is required by the frontend API client and should point to the MiniBlog backend origin without a trailing slash.
+
+`NEXT_PUBLIC_SITE_URL` is used by generated metadata routes such as `sitemap.xml` and `robots.txt`. It should point to the public frontend origin without a trailing slash.
 
 ## Routes
 
