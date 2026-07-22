@@ -106,6 +106,8 @@ The host URI uses `127.0.0.1:3307` because Docker publishes container port `3306
 
 The backend reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local URI when neither variable is set. Use `.env.example` for the documented host-machine setup. The Compose API service overrides `DATABASE_URL` to the `mysql:3306` form for container usage.
 
+The Compose API service also sets `MINIBLOG_ENV=production`; keep a strong non-placeholder `JWT_SECRET_KEY` in `.env` before starting that container.
+
 ## Backend Setup
 
 Install backend dependencies:

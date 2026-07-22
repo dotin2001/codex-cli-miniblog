@@ -46,6 +46,18 @@ The Flask app reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and fi
 
 The Docker Compose API service overrides `DATABASE_URL` to use `mysql:3306`, so the container connects over the Compose network even when `.env` contains the host-machine URL.
 
+## Runtime Configuration
+
+Local development uses:
+
+```text
+MINIBLOG_ENV=development
+REFRESH_TOKEN_COOKIE_SECURE=false
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
+Production-like environments should use `MINIBLOG_ENV=production`, a long random `JWT_SECRET_KEY`, deployment-specific `CORS_ORIGINS`, and `REFRESH_TOKEN_COOKIE_SECURE=true` when served over HTTPS. The app fails fast in production-like environments when `JWT_SECRET_KEY` is empty, too short, or still set to a documented placeholder.
+
 Auth, blog, current-user, and comment endpoints allow credentialed CORS requests from the local Next.js frontend origins configured by `CORS_ORIGINS`:
 
 ```text

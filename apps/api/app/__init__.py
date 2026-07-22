@@ -1,6 +1,6 @@
 from flask import Flask
 
-from app.config import Config
+from app.config import Config, validate_runtime_config
 from app.extensions import cors, db, migrate
 from app.routes.auth import auth_bp
 from app.routes.blogs import blogs_bp, me_bp
@@ -12,6 +12,7 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
     app = Flask(__name__)
 
     app.config.from_object(config_object or Config)
+    validate_runtime_config(app.config)
     cors.init_app(
         app,
         resources={

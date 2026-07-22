@@ -1,6 +1,18 @@
 import os
 
 
+PRODUCTION_ENV_NAMES = {"production", "prod", "staging"}
+UNSAFE_JWT_SECRET_KEYS = {
+    "",
+    "change-me",
+    "changeme",
+    "replace-me",
+    "replace-with-a-long-random-local-secret",
+    "secret",
+    "test-jwt-secret",
+}
+
+
 def _parse_cors_origins(value: str | None) -> list[str]:
     if value is None:
         return [
@@ -11,7 +23,45 @@ def _parse_cors_origins(value: str | None) -> list[str]:
     return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
+def _runtime_env_name(config: dict) -> str:
+    value = (
+        config.get("MINIBLOG_ENV")
+        or os.getenv("MINIBLOG_ENV")
+        or os.getenv("APP_ENV")
+        or os.getenv("FLASK_ENV")
+        or os.getenv("ENV")
+        or "development"
+    )
+    return str(value).strip().lower()
+
+
+def _is_unsafe_jwt_secret(value: object) -> bool:
+    secret = str(value or "").strip()
+    return len(secret) < 32 or secret.lower() in UNSAFE_JWT_SECRET_KEYS
+
+
+def validate_runtime_config(config: dict) -> None:
+    if config.get("TESTING"):
+        return
+
+    if _runtime_env_name(config) not in PRODUCTION_ENV_NAMES:
+        return
+
+    if _is_unsafe_jwt_secret(config.get("JWT_SECRET_KEY")):
+        raise RuntimeError(
+            "JWT_SECRET_KEY must be set to a strong non-placeholder value "
+            "for production-like environments."
+        )
+
+
 class Config:
+    MINIBLOG_ENV = (
+        os.getenv("MINIBLOG_ENV")
+        or os.getenv("APP_ENV")
+        or os.getenv("FLASK_ENV")
+        or os.getenv("ENV")
+        or "development"
+    )
     SQLALCHEMY_DATABASE_URI = (
         os.getenv("DATABASE_URL")
         or os.getenv("SQLALCHEMY_DATABASE_URI")

@@ -37,6 +37,8 @@ Login does not create database-backed refresh-token state yet.
 
 Browser clients must send auth requests from an allowed `CORS_ORIGINS` origin and include credentials when they need the refresh-token cookie to be set or sent.
 
+`JWT_SECRET_KEY` must be a long random value outside tests and local examples. Production-like environments, including the Docker Compose API service, use `MINIBLOG_ENV=production` and fail fast when `JWT_SECRET_KEY` is empty, too short, or still set to a placeholder value.
+
 ## Refresh
 
 1. Client sends `POST /auth/refresh` with the refresh-token cookie.

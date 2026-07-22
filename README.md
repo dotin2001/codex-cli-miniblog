@@ -61,6 +61,8 @@ Backend local settings are based on the root example:
 cp .env.example .env
 ```
 
+For local development, keep `MINIBLOG_ENV=development` and replace `JWT_SECRET_KEY` with a long random local-only value. Production-like environments such as the Compose API service use `MINIBLOG_ENV=production` and fail fast when `JWT_SECRET_KEY` is empty, too short, or still set to a placeholder.
+
 Frontend local settings are based on:
 
 ```bash
@@ -102,6 +104,8 @@ mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 
 The Compose API service sets that container `DATABASE_URL` explicitly, so a host-oriented `.env` value does not make the API container try to reach MySQL through `127.0.0.1:3307`.
 
+For HTTPS deployments, set `REFRESH_TOKEN_COOKIE_SECURE=true` and set `CORS_ORIGINS` to the allowed frontend origins as a comma-separated list.
+
 Apply migrations:
 
 ```bash
@@ -130,6 +134,8 @@ Build and run the API container from the project root:
 docker compose build api
 docker compose up api
 ```
+
+The API container runs the Flask app with Gunicorn. It does not run migrations automatically.
 
 Health check:
 
