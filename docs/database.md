@@ -104,7 +104,7 @@ mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 
 The host URI uses `127.0.0.1:3307` because Docker publishes container port `3306` on host port `3307`. The container URI uses `mysql:3306` because containers resolve the Compose service name directly on the Docker network and connect to MySQL's internal port.
 
-The backend reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local URI when neither variable is set. Use `.env.example` for the documented host-machine setup, and switch `DATABASE_URL` to the `mysql:3306` form when running the API as a container.
+The backend reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local URI when neither variable is set. Use `.env.example` for the documented host-machine setup. The Compose API service overrides `DATABASE_URL` to the `mysql:3306` form for container usage.
 
 ## Backend Setup
 
@@ -156,6 +156,12 @@ set -a
 source ../../.env
 set +a
 flask --app app db upgrade
+```
+
+Apply existing migrations from the API container after MySQL is running, from the project root:
+
+```bash
+docker compose run --rm api flask --app app db upgrade
 ```
 
 Commit generated migration files with the model changes that require them.

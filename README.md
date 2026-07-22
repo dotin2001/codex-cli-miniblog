@@ -100,6 +100,8 @@ For Docker-network/container usage, use the Compose service name and MySQL conta
 mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 ```
 
+The Compose API service sets that container `DATABASE_URL` explicitly, so a host-oriented `.env` value does not make the API container try to reach MySQL through `127.0.0.1:3307`.
+
 Apply migrations:
 
 ```bash
@@ -110,10 +112,23 @@ set +a
 flask --app app db upgrade
 ```
 
+For the API container, run migrations separately after MySQL is running:
+
+```bash
+docker compose run --rm api flask --app app db upgrade
+```
+
 Run the API:
 
 ```bash
 flask --app app run --debug --port 8080
+```
+
+Build and run the API container from the project root:
+
+```bash
+docker compose build api
+docker compose up api
 ```
 
 Health check:

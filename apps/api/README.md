@@ -8,6 +8,7 @@ Flask API for the MiniBlog backend.
 - Flask-Cors
 - Flask-SQLAlchemy
 - Flask-Migrate
+- Gunicorn
 - PyJWT
 - PyMySQL
 
@@ -43,6 +44,8 @@ mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 
 The Flask app reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and finally falls back to its built-in local database URL. Copy `.env.example` to `.env` for the documented host-machine setup.
 
+The Docker Compose API service overrides `DATABASE_URL` to use `mysql:3306`, so the container connects over the Compose network even when `.env` contains the host-machine URL.
+
 Auth, blog, current-user, and comment endpoints allow credentialed CORS requests from the local Next.js frontend origins configured by `CORS_ORIGINS`:
 
 ```text
@@ -63,6 +66,12 @@ flask --app app db upgrade
 
 Migration files live in `apps/api/migrations`.
 
+When running the API container, apply migrations explicitly from the project root after MySQL is running:
+
+```bash
+docker compose run --rm api flask --app app db upgrade
+```
+
 ## Run
 
 ```bash
@@ -74,6 +83,17 @@ The API will be available at:
 ```text
 http://127.0.0.1:8080
 ```
+
+## Docker
+
+Build and run the API service from the project root:
+
+```bash
+docker compose build api
+docker compose up api
+```
+
+The container image uses Gunicorn on `0.0.0.0:8080`. It does not run migrations automatically.
 
 ## Health Check
 

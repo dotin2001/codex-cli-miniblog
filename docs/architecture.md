@@ -59,6 +59,7 @@ Backend stack:
 - Flask-Cors
 - Flask-SQLAlchemy
 - Flask-Migrate
+- Gunicorn for the API container
 - PyJWT
 - PyMySQL
 
