@@ -84,6 +84,8 @@ Use `.env.example` as the template for local settings:
 cp .env.example .env
 ```
 
+Replace the placeholder values in `.env` with local-only database credentials before starting MySQL or sourcing the file.
+
 Start MySQL from the project root:
 
 ```bash
@@ -105,6 +107,24 @@ mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 The host URI uses `127.0.0.1:3307` because Docker publishes container port `3306` on host port `3307`. The container URI uses `mysql:3306` because containers resolve the Compose service name directly on the Docker network and connect to MySQL's internal port.
 
 The backend reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local URI when neither variable is set. Use `.env.example` for the documented host-machine setup. The Compose API service overrides `DATABASE_URL` to the `mysql:3306` form for container usage.
+
+## Railway MySQL
+
+Railway can provide the MySQL connection URL through its Variables UI. In Railway, it is valid to set:
+
+```text
+DATABASE_URL=${{mysql.MYSQL_URL}}
+```
+
+This is a Railway Variables UI expression only. Do not put this expression, resolved secrets, or deployment credentials in local `.env` files or commit them to the repository.
+
+Railway may resolve that variable to a URL that starts with:
+
+```text
+mysql://
+```
+
+The backend uses SQLAlchemy with PyMySQL, so it normalizes only the database URL scheme. A `DATABASE_URL` that starts with `mysql://` is converted to `mysql+pymysql://` automatically. A `DATABASE_URL` that already starts with `mysql+pymysql://` is used unchanged. The normalization does not depend on `MINIBLOG_ENV` and does not assume a hostname, port, or database name.
 
 The Compose API service also sets `MINIBLOG_ENV=production`; keep a strong non-placeholder `JWT_SECRET_KEY` in `.env` before starting that container.
 

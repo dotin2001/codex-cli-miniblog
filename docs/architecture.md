@@ -83,7 +83,7 @@ MiniBlog uses SQLAlchemy models and Flask-Migrate migrations for:
 - `blogs`
 - `comments`
 
-Local development uses MySQL 8.0 from the root `docker-compose.yml`. Host-machine tools connect through `127.0.0.1:3307`; containers on the Docker Compose network connect through `mysql:3306`. The backend reads `DATABASE_URL`, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local MySQL URI when neither variable is set.
+Local development uses MySQL 8.0 from the root `docker-compose.yml`. Host-machine tools connect through `127.0.0.1:3307`; containers on the Docker Compose network connect through `mysql:3306`. The backend reads `DATABASE_URL`, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local MySQL URI when neither variable is set. Database URL normalization is scheme-only: `mysql://` is converted to `mysql+pymysql://`, and existing `mysql+pymysql://` URLs are left unchanged.
 
 ## Communication
 

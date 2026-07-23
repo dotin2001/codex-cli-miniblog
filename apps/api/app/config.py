@@ -23,6 +23,13 @@ def _parse_cors_origins(value: str | None) -> list[str]:
     return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
+def normalize_database_url(database_url: str | None) -> str | None:
+    if database_url is not None and database_url.startswith("mysql://"):
+        return database_url.replace("mysql://", "mysql+pymysql://", 1)
+
+    return database_url
+
+
 def _runtime_env_name(config: dict) -> str:
     value = (
         config.get("MINIBLOG_ENV")
@@ -63,9 +70,11 @@ class Config:
         or "development"
     )
     SQLALCHEMY_DATABASE_URI = (
-        os.getenv("DATABASE_URL")
-        or os.getenv("SQLALCHEMY_DATABASE_URI")
-        or "mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3306/miniblog"
+        normalize_database_url(
+            os.getenv("DATABASE_URL")
+            or os.getenv("SQLALCHEMY_DATABASE_URI")
+            or "mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3306/miniblog"
+        )
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")

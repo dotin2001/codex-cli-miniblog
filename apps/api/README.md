@@ -44,7 +44,11 @@ mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 
 The Flask app reads `DATABASE_URL` first, then `SQLALCHEMY_DATABASE_URI`, and finally falls back to its built-in local database URL. Copy `.env.example` to `.env` for the documented host-machine setup.
 
+Replace the placeholder values in `.env` with local-only database credentials before starting MySQL or sourcing the file.
+
 The Docker Compose API service overrides `DATABASE_URL` to use `mysql:3306`, so the container connects over the Compose network even when `.env` contains the host-machine URL.
+
+For Railway deployments, set `DATABASE_URL=${{mysql.MYSQL_URL}}` in the Railway Variables UI only. Do not copy that expression or resolved Railway secrets into local `.env` files. Railway may resolve the value to a `mysql://` URL; the backend automatically normalizes that scheme to `mysql+pymysql://` for SQLAlchemy and leaves existing `mysql+pymysql://` URLs unchanged.
 
 ## Runtime Configuration
 

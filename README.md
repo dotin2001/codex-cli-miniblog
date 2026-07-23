@@ -61,7 +61,7 @@ Backend local settings are based on the root example:
 cp .env.example .env
 ```
 
-For local development, keep `MINIBLOG_ENV=development` and replace `JWT_SECRET_KEY` with a long random local-only value. Production-like environments such as the Compose API service use `MINIBLOG_ENV=production` and fail fast when `JWT_SECRET_KEY` is empty, too short, or still set to a placeholder.
+For local development, replace the placeholder values in `.env`, keep `MINIBLOG_ENV=development`, and set `JWT_SECRET_KEY` to a long random local-only value. Production-like environments such as the Compose API service use `MINIBLOG_ENV=production` and fail fast when `JWT_SECRET_KEY` is empty, too short, or still set to a placeholder.
 
 Frontend local settings are based on:
 
@@ -103,6 +103,8 @@ mysql+pymysql://miniblog:miniblog_password@mysql:3306/miniblog
 ```
 
 The Compose API service sets that container `DATABASE_URL` explicitly, so a host-oriented `.env` value does not make the API container try to reach MySQL through `127.0.0.1:3307`.
+
+For Railway deployments, set `DATABASE_URL=${{mysql.MYSQL_URL}}` in the Railway Variables UI only. Do not copy that expression or resolved Railway secrets into local `.env` files. Railway may resolve the value to a `mysql://` URL; the backend automatically normalizes that scheme to `mysql+pymysql://` for SQLAlchemy and leaves existing `mysql+pymysql://` URLs unchanged.
 
 For HTTPS deployments, set `REFRESH_TOKEN_COOKIE_SECURE=true` and set `CORS_ORIGINS` to the allowed frontend origins as a comma-separated list.
 
