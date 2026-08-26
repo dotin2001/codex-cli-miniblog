@@ -21,7 +21,6 @@ The project is separated into:
 - Blog CRUD
 - Comment system
 - Responsive UI
-- Dark mode
 
 ## Tech Stack
 
@@ -35,9 +34,9 @@ The project is separated into:
 ### Backend
 
 - Python
-- Flask or FastAPI
+- Flask
 - SQLAlchemy
-- MySQL or PostgreSQL
+- MySQL
 - JWT authentication
 - Database migrations
 
@@ -54,34 +53,38 @@ miniblog-project/
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
-App Boundaries
+```
+
+## App Boundaries
 
 Frontend handles:
 
-Pages
-Layouts
-Components
-UI state
-Form behavior
-Calling backend APIs
-Responsive UI
+- Pages
+- Layouts
+- Components
+- UI state
+- Form behavior
+- Calling backend APIs
+- Responsive UI
 
 Backend handles:
 
-API routes
-Authentication
-Authorization
-Database models
-Database migrations
-Business logic
-Validation
-Error responses
-General Coding Rules
-Keep changes small.
-Follow existing structure.
-Reuse existing utilities/components.
-Do not introduce new libraries unless requested.
-Do not expose secrets.
-Do not change unrelated files.
+- API routes
+- Authentication
+- Authorization
+- Database models
+- Database migrations
+- Business logic
+- Validation
+- Error responses
+
+## General Coding Rules
+
+- Keep changes small.
+- Follow existing structure.
+- Reuse existing utilities/components.
+- Do not introduce new libraries unless requested.
+- Do not expose secrets.
+- Do not change unrelated files.
 
 ---

@@ -3,10 +3,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-import jwt
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 from sqlalchemy.orm import joinedload
 
+from app.auth import current_user_from_authorization_header
 from app.extensions import db
 from app.models.blog import Blog
 from app.models.comment import Comment
@@ -73,29 +73,6 @@ def _view_forbidden_error():
         "FORBIDDEN",
         "Only the blog author can view this blog.",
     )
-
-
-def _jwt_secret_key() -> str:
-    secret_key = current_app.config.get("JWT_SECRET_KEY")
-    if not secret_key:
-        raise RuntimeError("JWT_SECRET_KEY must be configured.")
-
-    return secret_key
-
-
-def _current_user_from_authorization_header() -> User | None:
-    authorization = request.headers.get("Authorization", "")
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        return None
-
-    try:
-        payload = jwt.decode(parts[1], _jwt_secret_key(), algorithms=["HS256"])
-        user_id = int(payload["sub"])
-    except (KeyError, TypeError, ValueError, jwt.InvalidTokenError):
-        return None
-
-    return db.session.get(User, user_id)
 
 
 def _validate_create_blog_payload(
@@ -298,7 +275,7 @@ def _published_blog_by_slug(slug: str) -> Blog | None:
 
 @blogs_bp.post("")
 def create_blog():
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 
@@ -327,7 +304,7 @@ def create_blog():
 
 @blogs_bp.patch("/<slug>")
 def update_blog(slug: str):
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 
@@ -369,7 +346,7 @@ def update_blog(slug: str):
 
 @blogs_bp.delete("/<slug>")
 def delete_blog(slug: str):
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 
@@ -388,7 +365,7 @@ def delete_blog(slug: str):
 
 @blogs_bp.get("/<slug>/mine")
 def get_my_blog(slug: str):
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 
@@ -404,7 +381,7 @@ def get_my_blog(slug: str):
 
 @blogs_bp.post("/<slug>/comments")
 def create_comment(slug: str):
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 
@@ -452,7 +429,7 @@ def list_comments(slug: str):
 
 @me_bp.get("/blogs")
 def list_my_blogs():
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 

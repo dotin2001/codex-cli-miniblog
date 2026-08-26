@@ -155,6 +155,8 @@ npm run dev
 
 The frontend runs at `http://localhost:3000`.
 
+The repository includes `.nvmrc` files at the root and in `apps/web` for the Node version used by this project.
+
 ## Implemented Features
 
 - User registration, login, logout, refresh-token cookie issuance, and `GET /auth/me`
@@ -178,6 +180,7 @@ Frontend:
 ```bash
 cd apps/web
 npm run lint
+npm run test
 npm run typecheck
 ```
 

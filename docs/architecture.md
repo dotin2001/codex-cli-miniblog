@@ -24,7 +24,7 @@ Frontend stack:
 Implemented frontend routes:
 
 - `/`: landing page with login and register entry points.
-- `/login`: login form. Successful login stores the development access token in `localStorage` and redirects to `/dashboard`.
+- `/login`: login form. Successful login stores the development access token through the shared frontend auth-session helper and redirects to `/dashboard`.
 - `/register`: registration form. Registration does not automatically log the user in.
 - `/dashboard`: authenticated user summary from `GET /auth/me` and an entry point for creating a blog.
 - `/blogs`: public list of published blogs from `GET /blogs`.
@@ -103,3 +103,5 @@ flask --app app run --debug --port 8080
 The backend CORS configuration allows the local frontend origins configured by `CORS_ORIGINS`, including `http://localhost:3000` and `http://127.0.0.1:3000` by default.
 
 Authentication uses bearer access tokens for protected API calls. The current frontend stores the access token in `localStorage` under `miniblog.dev.accessToken` for local development. Login also sets an HTTP-only refresh-token cookie for `/auth/refresh`.
+
+Frontend protected actions use `apps/web/src/lib/auth-session.ts` to refresh the access token from the HTTP-only refresh cookie and retry once after a `401 Unauthorized` response.
