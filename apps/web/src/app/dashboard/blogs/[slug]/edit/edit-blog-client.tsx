@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { ApiRequestError as AuthApiRequestError, getMe } from "@/lib/api/auth";
 import type { AuthUser } from "@/lib/api/auth";
@@ -14,6 +14,12 @@ import {
   updateBlog,
 } from "@/lib/api/blogs";
 import type { Blog, BlogStatus, UpdateBlogPayload } from "@/lib/api/blogs";
+import {
+  clearStoredAccessToken,
+  isUnauthorizedApiError,
+  runWithFreshAccessToken,
+  useAccessToken,
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
 
 type FormError = {
@@ -70,8 +76,6 @@ type CurrentUserState =
       message: string;
     };
 
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
-
 export function EditBlogClient({ slug }: { slug: string }) {
   const router = useRouter();
   const accessToken = useAccessToken();
@@ -87,19 +91,21 @@ export function EditBlogClient({ slug }: { slug: string }) {
   const [formError, setFormError] = useState<FormError | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const activeAccessToken = removedToken ? null : accessToken;
+  const canTrySession = !removedToken;
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadBlog() {
-      if (!activeAccessToken) {
+      if (removedToken) {
         setBlogState({ blog: null, status: "loading" });
         return;
       }
 
       try {
-        const { blog } = await getMyBlog(slug, activeAccessToken);
+        const { blog } = await runWithFreshAccessToken((accessToken) =>
+          getMyBlog(slug, accessToken)
+        );
 
         if (isMounted) {
           setBlogState({ blog, status: "ready" });
@@ -131,13 +137,13 @@ export function EditBlogClient({ slug }: { slug: string }) {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken, slug]);
+  }, [accessToken, removedToken, slug]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadCurrentUser() {
-      if (!activeAccessToken) {
+      if (removedToken) {
         setCurrentUserState({
           message: "Log in to edit this blog post.",
           status: "unauthenticated",
@@ -149,14 +155,16 @@ export function EditBlogClient({ slug }: { slug: string }) {
       setCurrentUserState({ status: "loading", user: null });
 
       try {
-        const { user } = await getMe(activeAccessToken);
+        const { user } = await runWithFreshAccessToken((accessToken) =>
+          getMe(accessToken)
+        );
 
         if (isMounted) {
           setCurrentUserState({ status: "ready", user });
         }
       } catch (error) {
-        if (error instanceof AuthApiRequestError && error.status === 401) {
-          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (isUnauthorizedApiError(error)) {
+          clearStoredAccessToken();
           setRemovedToken(true);
         }
 
@@ -164,7 +172,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
           setCurrentUserState({
             message: getAuthErrorMessage(error),
             status:
-              error instanceof AuthApiRequestError && error.status === 401
+              isUnauthorizedApiError(error)
                 ? "unauthenticated"
                 : "error",
             user: null,
@@ -178,13 +186,13 @@ export function EditBlogClient({ slug }: { slug: string }) {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken]);
+  }, [accessToken, removedToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setFormError({ message: "Log in to edit this blog post." });
       return;
     }
@@ -203,10 +211,8 @@ export function EditBlogClient({ slug }: { slug: string }) {
     const formData = new FormData(event.currentTarget);
 
     try {
-      const { blog } = await updateBlog(
-        slug,
-        getPayload(formData),
-        activeAccessToken,
+      const { blog } = await runWithFreshAccessToken(
+        (accessToken) => updateBlog(slug, getPayload(formData), accessToken),
       );
       router.push(
         blog.status === "published"
@@ -224,7 +230,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
   async function handleDelete() {
     setFormError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setFormError({ message: "Log in to delete this blog post." });
       return;
     }
@@ -249,7 +255,9 @@ export function EditBlogClient({ slug }: { slug: string }) {
     setIsDeleting(true);
 
     try {
-      await deleteBlog(slug, activeAccessToken);
+      await runWithFreshAccessToken((accessToken) =>
+        deleteBlog(slug, accessToken)
+      );
       router.push(routes.blogs);
     } catch (error) {
       handleAuthenticatedError(error);
@@ -260,8 +268,8 @@ export function EditBlogClient({ slug }: { slug: string }) {
   }
 
   function handleAuthenticatedError(error: unknown) {
-    if (error instanceof ApiRequestError && error.status === 401) {
-      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    if (isUnauthorizedApiError(error)) {
+      clearStoredAccessToken();
       setRemovedToken(true);
     }
   }
@@ -304,8 +312,8 @@ export function EditBlogClient({ slug }: { slug: string }) {
           </div>
 
           <EditBlogContent
-            accessToken={activeAccessToken}
             blogState={blogState}
+            canTrySession={canTrySession}
             currentUserState={currentUserState}
             error={formError}
             isDeleting={isDeleting}
@@ -320,8 +328,8 @@ export function EditBlogClient({ slug }: { slug: string }) {
 }
 
 function EditBlogContent({
-  accessToken,
   blogState,
+  canTrySession,
   currentUserState,
   error,
   isDeleting,
@@ -329,8 +337,8 @@ function EditBlogContent({
   onDelete,
   onSubmit,
 }: {
-  accessToken: string | null;
   blogState: BlogLoadState;
+  canTrySession: boolean;
   currentUserState: CurrentUserState;
   error: FormError | null;
   isDeleting: boolean;
@@ -338,7 +346,7 @@ function EditBlogContent({
   onDelete: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  if (!accessToken) {
+  if (!canTrySession) {
     return (
       <UnauthenticatedState
         error={
@@ -653,26 +661,6 @@ function FormErrorMessage({ error }: { error: FormError }) {
       {error.message}
     </p>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(
-    subscribeToAccessToken,
-    getAccessTokenSnapshot,
-    () => null,
-  );
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 function getPayload(formData: FormData): UpdateBlogPayload {

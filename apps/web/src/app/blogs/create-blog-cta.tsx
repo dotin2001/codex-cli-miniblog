@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
 
+import { useAccessToken } from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
-
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
 
 export function CreateBlogCta() {
   const accessToken = useAccessToken();
@@ -22,20 +20,4 @@ export function CreateBlogCta() {
       Create Blog
     </Link>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(subscribeToAccessToken, getAccessTokenSnapshot, () => null);
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }

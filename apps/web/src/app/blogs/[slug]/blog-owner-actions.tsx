@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { ApiRequestError, getMe } from "@/lib/api/auth";
 import { deleteBlog } from "@/lib/api/blogs";
 import type { Blog } from "@/lib/api/blogs";
+import {
+  clearStoredAccessToken,
+  isUnauthorizedApiError,
+  runWithFreshAccessToken,
+  useAccessToken,
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
 
 type OwnerActionState = "idle" | "checking" | "owner" | "not-owner";
-
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
 
 export function BlogOwnerActions({ blog }: { blog: Blog }) {
   const router = useRouter();
@@ -20,13 +24,12 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
   const [state, setState] = useState<OwnerActionState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const activeAccessToken = removedToken ? null : accessToken;
 
   useEffect(() => {
     let isMounted = true;
 
     async function checkOwnership() {
-      if (!activeAccessToken) {
+      if (removedToken) {
         setState("idle");
         return;
       }
@@ -34,15 +37,17 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
       setState("checking");
 
       try {
-        const { user } = await getMe(activeAccessToken);
+        const { user } = await runWithFreshAccessToken((accessToken) =>
+          getMe(accessToken)
+        );
         const authorId = blog.author?.id ?? blog.authorId;
 
         if (isMounted) {
           setState(user.id === authorId ? "owner" : "not-owner");
         }
       } catch (caughtError) {
-        if (caughtError instanceof ApiRequestError && caughtError.status === 401) {
-          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (isUnauthorizedApiError(caughtError)) {
+          clearStoredAccessToken();
           setRemovedToken(true);
         }
 
@@ -57,12 +62,12 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken, blog.author?.id, blog.authorId]);
+  }, [accessToken, removedToken, blog.author?.id, blog.authorId]);
 
   async function handleDelete() {
     setError(null);
 
-    if (!activeAccessToken || state !== "owner") {
+    if (removedToken || state !== "owner") {
       setError("Only the blog author can delete this post.");
       return;
     }
@@ -78,11 +83,13 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
     setIsDeleting(true);
 
     try {
-      await deleteBlog(blog.slug, activeAccessToken);
+      await runWithFreshAccessToken((accessToken) =>
+        deleteBlog(blog.slug, accessToken)
+      );
       router.push(routes.blogs);
     } catch (caughtError) {
-      if (caughtError instanceof ApiRequestError && caughtError.status === 401) {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      if (isUnauthorizedApiError(caughtError)) {
+        clearStoredAccessToken();
         setRemovedToken(true);
       }
 
@@ -124,22 +131,6 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
       ) : null}
     </div>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(subscribeToAccessToken, getAccessTokenSnapshot, () => null);
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 function getActionErrorMessage(error: unknown): string {

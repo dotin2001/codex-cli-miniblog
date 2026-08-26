@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 
 import { ApiRequestError, createBlog } from "@/lib/api/blogs";
 import type { BlogStatus, CreateBlogPayload } from "@/lib/api/blogs";
+import {
+  clearStoredAccessToken,
+  isUnauthorizedApiError,
+  runWithFreshAccessToken,
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
 
 type FormError = {
@@ -14,21 +19,17 @@ type FormError = {
   message: string;
 };
 
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
-
 export default function NewBlogPage() {
   const router = useRouter();
-  const accessToken = useAccessToken();
   const [removedToken, setRemovedToken] = useState(false);
   const [error, setError] = useState<FormError | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const activeAccessToken = removedToken ? null : accessToken;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setError({ message: "Log in to create a blog post." });
       return;
     }
@@ -38,15 +39,17 @@ export default function NewBlogPage() {
     const formData = new FormData(event.currentTarget);
 
     try {
-      const { blog } = await createBlog(getPayload(formData), activeAccessToken);
+      const { blog } = await runWithFreshAccessToken((accessToken) =>
+        createBlog(getPayload(formData), accessToken)
+      );
       router.push(
         blog.status === "published"
           ? routes.blog(blog.slug)
           : routes.editBlog(blog.slug),
       );
     } catch (caughtError) {
-      if (caughtError instanceof ApiRequestError && caughtError.status === 401) {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      if (isUnauthorizedApiError(caughtError)) {
+        clearStoredAccessToken();
         setRemovedToken(true);
       }
 
@@ -92,7 +95,7 @@ export default function NewBlogPage() {
             </p>
           </div>
 
-          {!activeAccessToken ? (
+          {removedToken ? (
             <UnauthenticatedState
               error={error ?? { message: "Log in to create a blog post." }}
             />
@@ -267,22 +270,6 @@ function FormErrorMessage({ error }: { error: FormError }) {
       {error.message}
     </p>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(subscribeToAccessToken, getAccessTokenSnapshot, () => null);
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 function getPayload(formData: FormData): CreateBlogPayload {

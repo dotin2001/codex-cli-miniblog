@@ -13,6 +13,11 @@ import {
   logout,
   register
 } from "@/lib/api/auth";
+import {
+  clearStoredAccessToken,
+  runWithFreshAccessToken,
+  setStoredAccessToken
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
 
 type AuthFormError = {
@@ -24,8 +29,6 @@ type DashboardState =
   | { status: "loading"; user: null; error: null }
   | { status: "unauthenticated"; user: null; error: AuthFormError | null }
   | { status: "authenticated"; user: AuthUser; error: AuthFormError | null };
-
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
 
 export function LoginPanel() {
   const router = useRouter();
@@ -45,7 +48,7 @@ export function LoginPanel() {
         password: getFormValue(formData, "password")
       });
 
-      window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, response.accessToken);
+      setStoredAccessToken(response.accessToken);
       router.push(routes.dashboard);
     } catch (caughtError) {
       setError(toFormError(caughtError));
@@ -173,30 +176,15 @@ export function DashboardPanel() {
     let isMounted = true;
 
     async function loadCurrentUser() {
-      const accessToken = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
-
-      if (!accessToken) {
-        if (isMounted) {
-          setState({
-            error: {
-              message: "Log in to view your dashboard."
-            },
-            status: "unauthenticated",
-            user: null
-          });
-        }
-        return;
-      }
-
       try {
-        const { user } = await getMe(accessToken);
+        const { user } = await runWithFreshAccessToken((accessToken) =>
+          getMe(accessToken)
+        );
 
         if (isMounted) {
           setState({ error: null, status: "authenticated", user });
         }
       } catch (caughtError) {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-
         if (isMounted) {
           setState({
             error: toFormError(caughtError),
@@ -228,7 +216,7 @@ export function DashboardPanel() {
         user: null
       });
     } finally {
-      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      clearStoredAccessToken();
       setIsSigningOut(false);
     }
   }

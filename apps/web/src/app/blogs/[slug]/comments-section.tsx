@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { getMe } from "@/lib/api/auth";
 import {
@@ -13,6 +13,12 @@ import {
   updateComment
 } from "@/lib/api/comments";
 import type { Comment } from "@/lib/api/comments";
+import {
+  clearStoredAccessToken,
+  isUnauthorizedApiError,
+  runWithFreshAccessToken,
+  useAccessToken,
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
 
 type CommentLoadState =
@@ -42,8 +48,6 @@ type EditState = {
   content: string;
 };
 
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
-
 export function CommentsSection({ slug }: { slug: string }) {
   const accessToken = useAccessToken();
   const [removedToken, setRemovedToken] = useState(false);
@@ -56,7 +60,7 @@ export function CommentsSection({ slug }: { slug: string }) {
   const [actionError, setActionError] = useState<CommentActionError | null>(null);
   const [savingCommentId, setSavingCommentId] = useState<number | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
-  const activeAccessToken = removedToken ? null : accessToken;
+  const canTrySession = !removedToken;
 
   useEffect(() => {
     let isMounted = true;
@@ -91,20 +95,22 @@ export function CommentsSection({ slug }: { slug: string }) {
     let isMounted = true;
 
     async function loadCurrentUser() {
-      if (!activeAccessToken) {
+      if (removedToken) {
         setCurrentUserId(null);
         return;
       }
 
       try {
-        const { user } = await getMe(activeAccessToken);
+        const { user } = await runWithFreshAccessToken((accessToken) =>
+          getMe(accessToken)
+        );
 
         if (isMounted) {
           setCurrentUserId(user.id);
         }
       } catch (error) {
-        if (error instanceof ApiRequestError && error.status === 401) {
-          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (isUnauthorizedApiError(error)) {
+          clearStoredAccessToken();
           setRemovedToken(true);
         }
 
@@ -119,13 +125,13 @@ export function CommentsSection({ slug }: { slug: string }) {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken]);
+  }, [accessToken, removedToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setFormError({ message: "Log in to add a comment." });
       return;
     }
@@ -141,10 +147,8 @@ export function CommentsSection({ slug }: { slug: string }) {
     setIsSubmitting(true);
 
     try {
-      const { comment } = await createComment(
-        slug,
-        { content },
-        activeAccessToken
+      const { comment } = await runWithFreshAccessToken(
+        (accessToken) => createComment(slug, { content }, accessToken)
       );
 
       setContent("");
@@ -162,8 +166,8 @@ export function CommentsSection({ slug }: { slug: string }) {
         };
       });
     } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      if (isUnauthorizedApiError(error)) {
+        clearStoredAccessToken();
         setRemovedToken(true);
       }
 
@@ -176,7 +180,7 @@ export function CommentsSection({ slug }: { slug: string }) {
   async function handleSaveComment(commentId: number) {
     setActionError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setActionError({
         commentId,
         message: "Log in to edit this comment."
@@ -200,10 +204,9 @@ export function CommentsSection({ slug }: { slug: string }) {
     setSavingCommentId(commentId);
 
     try {
-      const { comment } = await updateComment(
-        commentId,
-        { content: editState.content },
-        activeAccessToken
+      const { comment } = await runWithFreshAccessToken(
+        (accessToken) =>
+          updateComment(commentId, { content: editState.content }, accessToken)
       );
 
       setState((currentState) => {
@@ -233,7 +236,7 @@ export function CommentsSection({ slug }: { slug: string }) {
   async function handleDeleteComment(commentId: number) {
     setActionError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setActionError({
         commentId,
         message: "Log in to delete this comment."
@@ -252,7 +255,9 @@ export function CommentsSection({ slug }: { slug: string }) {
     setDeletingCommentId(commentId);
 
     try {
-      await deleteComment(commentId, activeAccessToken);
+      await runWithFreshAccessToken((accessToken) =>
+        deleteComment(commentId, accessToken)
+      );
 
       setState((currentState) => {
         if (currentState.status !== "success") {
@@ -286,8 +291,8 @@ export function CommentsSection({ slug }: { slug: string }) {
     error: unknown,
     fallbackMessage: string
   ) {
-    if (error instanceof ApiRequestError && error.status === 401) {
-      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    if (isUnauthorizedApiError(error)) {
+      clearStoredAccessToken();
       setRemovedToken(true);
     }
 
@@ -318,7 +323,7 @@ export function CommentsSection({ slug }: { slug: string }) {
 
       <div className="mt-6">
         <CommentForm
-          accessToken={activeAccessToken}
+          canTrySession={canTrySession}
           content={content}
           error={formError}
           isSubmitting={isSubmitting}
@@ -365,21 +370,21 @@ export function CommentsSection({ slug }: { slug: string }) {
 }
 
 function CommentForm({
-  accessToken,
+  canTrySession,
   content,
   error,
   isSubmitting,
   onChange,
   onSubmit
 }: {
-  accessToken: string | null;
+  canTrySession: boolean;
   content: string;
   error: FormError | null;
   isSubmitting: boolean;
   onChange: (content: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  if (!accessToken) {
+  if (!canTrySession) {
     return (
       <div className="rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 text-sm text-slate-700">
         <span>Log in to add your comment.</span>{" "}
@@ -612,22 +617,6 @@ function FormErrorMessage({ error }: { error: FormError }) {
       {error.message}
     </p>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(subscribeToAccessToken, getAccessTokenSnapshot, () => null);
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 function toFormError(

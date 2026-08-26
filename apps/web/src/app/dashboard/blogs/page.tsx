@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  ApiRequestError,
-  deleteBlog,
-  getMyBlogs,
-} from "@/lib/api/blogs";
+import { ApiRequestError, deleteBlog, getMyBlogs } from "@/lib/api/blogs";
 import type { Blog, Pagination } from "@/lib/api/blogs";
+import {
+  clearStoredAccessToken,
+  isUnauthorizedApiError,
+  runWithFreshAccessToken,
+  useAccessToken,
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
 
 type MyBlogsState =
@@ -31,7 +33,6 @@ type MyBlogsState =
       status: "error";
     };
 
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
 const PAGE_SIZE = 10;
 
 export default function MyBlogsPage() {
@@ -45,21 +46,20 @@ export default function MyBlogsPage() {
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const activeAccessToken = removedToken ? null : accessToken;
+  const canTrySession = !removedToken;
 
   useEffect(() => {
     let isMounted = true;
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       return;
     }
 
-    const token = activeAccessToken;
-
     async function loadBlogs() {
       try {
-        const { blogs, pagination } = await getMyBlogs(
-          { page: 1, perPage: PAGE_SIZE },
-          token,
+        const { blogs, pagination } = await runWithFreshAccessToken(
+          (accessToken) =>
+            getMyBlogs({ page: 1, perPage: PAGE_SIZE }, accessToken),
         );
 
         if (isMounted) {
@@ -70,8 +70,8 @@ export default function MyBlogsPage() {
           return;
         }
 
-        if (error instanceof ApiRequestError && error.status === 401) {
-          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (isUnauthorizedApiError(error)) {
+          clearStoredAccessToken();
           setRemovedToken(true);
           return;
         }
@@ -90,7 +90,7 @@ export default function MyBlogsPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken]);
+  }, [removedToken]);
 
   async function handleDelete(blog: Blog) {
     setDeleteError(null);
@@ -110,11 +110,13 @@ export default function MyBlogsPage() {
     setDeletingSlug(blog.slug);
 
     try {
-      await deleteBlog(blog.slug, activeAccessToken);
+      await runWithFreshAccessToken((accessToken) =>
+        deleteBlog(blog.slug, accessToken)
+      );
       setState((currentState) => removeDeletedBlog(currentState, blog.id));
     } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      if (isUnauthorizedApiError(error)) {
+        clearStoredAccessToken();
         setRemovedToken(true);
         return;
       }
@@ -176,19 +178,19 @@ export default function MyBlogsPage() {
           </div>
 
           <div className="mt-10">
-            {activeAccessToken && state.status === "loading" ? (
+            {canTrySession && state.status === "loading" ? (
               <LoadingState />
             ) : null}
-            {!activeAccessToken ? (
+            {!canTrySession ? (
               <UnauthenticatedState message="Log in to view your blogs." />
             ) : null}
-            {activeAccessToken && state.status === "error" ? (
+            {canTrySession && state.status === "error" ? (
               <ErrorState message={state.message} />
             ) : null}
-            {activeAccessToken && state.status === "ready" && state.blogs.length === 0 ? (
+            {canTrySession && state.status === "ready" && state.blogs.length === 0 ? (
               <EmptyState />
             ) : null}
-            {activeAccessToken && state.status === "ready" && state.blogs.length > 0 ? (
+            {canTrySession && state.status === "ready" && state.blogs.length > 0 ? (
               <BlogList
                 blogs={state.blogs}
                 deleteError={deleteError}
@@ -201,22 +203,6 @@ export default function MyBlogsPage() {
       </div>
     </main>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(subscribeToAccessToken, getAccessTokenSnapshot, () => null);
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 function BlogList({

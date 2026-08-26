@@ -15,7 +15,7 @@ Frontend app for MiniBlog, built with the Next.js App Router.
 - Node.js `>=20.9.0`
 - npm
 
-The app is configured for Node 20 LTS compatibility. Builds will fail on older Node versions.
+The app is configured for Node 20+ compatibility. Builds will fail on older Node versions. Use the local `.nvmrc` when working from `apps/web`.
 
 ## Local Setup
 
@@ -62,13 +62,21 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 Login and registration forms are wired to the backend auth endpoints through `src/lib/api/auth.ts`.
 Blog endpoint helpers live in `src/lib/api/blogs.ts`, and comment endpoint helpers live in `src/lib/api/comments.ts`. They use the same `NEXT_PUBLIC_API_BASE_URL`, JSON error parsing, credential mode, and bearer access-token pattern as the auth client.
 
-For development only, a successful login stores the returned access token in `localStorage` under `miniblog.dev.accessToken` so the UI can reload the current user with `GET /auth/me`. This is not a production token-storage strategy. Refresh-token automation, durable session handling, and production auth hardening are not implemented yet.
+For development only, a successful login stores the returned access token in `localStorage` under `miniblog.dev.accessToken` so the UI can reload the current user with `GET /auth/me`. The shared `src/lib/auth-session.ts` helper refreshes the access token from the HTTP-only refresh-token cookie and retries protected requests once after `401 Unauthorized`. This is still not a production token-storage strategy.
 
 ## Lint
 
 ```bash
 npm run lint
 ```
+
+## Test
+
+```bash
+npm run test
+```
+
+The current frontend test suite uses Node's built-in test runner for lightweight static coverage of auth-session wiring and route contracts.
 
 ## Typecheck
 
@@ -126,5 +134,5 @@ apps/web/
 ## Current Limitations
 
 - Auth UI uses development-only access-token storage.
-- Profile editing, refresh-token automation, and comment moderation UI are not implemented in the frontend yet.
-- No frontend test runner is configured yet.
+- Profile editing, full production session hardening, dark mode, and comment moderation UI are not implemented in the frontend yet.
+- Frontend tests are currently lightweight static checks; no browser/component test runner is configured yet.
