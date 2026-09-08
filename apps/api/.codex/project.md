@@ -1,21 +1,5 @@
 # MiniBlog API App Context
 
-This is the backend app.
+Backend-specific agent guidance lives in `apps/api/AGENTS.md`.
 
-Path:
-
-```text
-apps/api
-
-Use this app for:
-
-API routes
-Auth
-Models
-Migrations
-Services
-Validation
-Backend tests
-
-Do not put frontend UI logic here.
-```
+From this `.codex` directory, that file is `../AGENTS.md`.

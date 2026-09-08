@@ -9,10 +9,12 @@ Before working on this repository, read the relevant project context:
 - `docs/api-contract.md` when changing frontend-backend communication
 - `docs/database.md` when changing models, migrations, or schema
 - `docs/auth-flow.md` when changing authentication, JWT, refresh token, cookies, or protected routes
+- `apps/api/AGENTS.md` when working inside the backend app
+- `apps/web/AGENTS.md` when working inside the frontend app
 
 ## Skill Routing
 
-Use the correct skill depending on the task type:
+This repository intentionally keeps its repo-specific Codex skills in `.codex/skills`. Use the correct skill depending on the task type:
 
 - `.codex/skills/miniblog-project-orchestrator/SKILL.md`
   - Use for full-stack tasks
@@ -26,6 +28,13 @@ Use the correct skill depending on the task type:
 - `.codex/skills/miniblog-backend-python/SKILL.md`
   - Use for backend tasks
   - Use for Flask, Python, MySQL, SQLAlchemy, migrations, API routes, validation, auth, JWT, and backend tests
+
+Repo-specific docs and skills are the primary source of truth. Use external best-practice skills only as secondary guidance:
+
+- Vercel React/Next.js best practices are suitable for frontend performance, bundle, data-fetching, and App Router reviews in `apps/web`.
+- Do not add frontend libraries such as SWR, component libraries, or form libraries just because external guidance mentions them.
+- Microsoft or Azure Flask guidance is suitable only for Azure deployment or Microsoft service integration. For normal backend work, prefer the MiniBlog backend skill and official Flask, SQLAlchemy, Flask-Migrate, PyJWT, and MySQL/PyMySQL docs.
+- When improving agent instructions, update durable Markdown context first, then align `.codex/skills/*/SKILL.md`.
 
 ## Working Rules
 
@@ -42,6 +51,7 @@ Use the correct skill depending on the task type:
 - Prefer reusable components and clean service/helper layers.
 - For UI changes, preserve responsive behavior, dark mode, accessibility basics, and the existing visual style unless redesign is requested.
 - When adding or changing behavior, add or update the smallest relevant test where the project already has test coverage for that layer.
+- Do not edit generated framework files such as `apps/web/next-env.d.ts` unless a generated-file issue is the explicit task.
 - If instructions conflict, prefer the more specific document for the touched area. If docs appear stale, mention the mismatch before changing behavior.
 - Explain changed files after each task.
 - Mention anything not tested.

@@ -29,6 +29,7 @@ Implemented frontend routes:
 - `/dashboard`: authenticated user summary from `GET /auth/me` and an entry point for creating a blog.
 - `/blogs`: public list of published blogs from `GET /blogs`.
 - `/blogs/[slug]`: public blog detail from `GET /blogs/:slug`, comments from `GET /blogs/:slug/comments`, authenticated comment creation, comment author-only edit/delete controls, and blog author-only edit/delete controls.
+- `/dashboard/blogs`: authenticated dashboard list of the current user's draft and published blogs from `GET /me/blogs`, with create, view, edit, and delete actions.
 - `/dashboard/blogs/new`: authenticated blog creation with draft or published status.
 - `/dashboard/blogs/[slug]/edit`: authenticated author-only blog editing. It loads through `GET /blogs/:slug/mine` so authors can edit drafts as well as published posts.
 
@@ -47,6 +48,7 @@ Frontend local configuration uses:
 
 ```text
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 ## Backend

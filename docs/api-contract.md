@@ -14,7 +14,7 @@ Backend:
 http://127.0.0.1:8080
 ```
 
-Auth, blog, and comment endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
+Auth, current-user, blog, and comment endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
 
 ```text
 http://localhost:3000

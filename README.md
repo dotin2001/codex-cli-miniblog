@@ -161,9 +161,10 @@ The repository includes `.nvmrc` files at the root and in `apps/web` for the Nod
 
 - User registration, login, logout, refresh-token cookie issuance, and `GET /auth/me`
 - Public blog list and public blog detail for published posts only
+- Authenticated dashboard list for the current user's draft and published posts
 - Authenticated blog create, update, delete, and author-only draft/published fetch for dashboard editing
 - Comment list/create/update/delete, with author-only edit/delete behavior
-- Frontend routes for home, login, register, dashboard, blog list, blog detail, create blog, and edit blog
+- Frontend routes for home, login, register, dashboard, my blogs, blog list, blog detail, create blog, and edit blog
 - Centralized frontend route helper in `apps/web/src/lib/routes.ts`
 
 ## Verification
