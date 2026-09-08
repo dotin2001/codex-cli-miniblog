@@ -23,6 +23,8 @@ Before editing backend code, read:
 
 Keep frontend UI logic out of this app. Preserve the Flask app factory, existing Blueprint patterns, documented API error envelopes, and MySQL-compatible runtime behavior.
 
+Generic Python Flask MySQL backend guidance is suitable as secondary review guidance for architecture, SQLAlchemy, auth, migrations, and production hardening. Ignore generic assumptions that do not match this app: MiniBlog uses PyJWT directly, does not use Flask-JWT-Extended, and does not depend on python-dotenv.
+
 Use official Flask ecosystem docs for framework behavior. Use Microsoft or Azure Flask guidance only when the task explicitly involves Azure deployment, Microsoft identity, or another Microsoft service.
 
 Verify backend changes with the smallest relevant check, usually:

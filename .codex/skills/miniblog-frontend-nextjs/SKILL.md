@@ -42,7 +42,7 @@ When framework behavior is version-sensitive or unclear, consult official docs b
 - React reference: `https://react.dev/reference/react`
 - Tailwind CSS v3: `https://v3.tailwindcss.com/docs/installation`
 
-Use Vercel React/Next.js best practices as secondary guidance for performance, bundle size, data-fetching, rerender behavior, and App Router boundaries. Apply those rules in a way that fits this repo's current dependency set.
+Load `build-web-apps:react-best-practices` as secondary guidance for React/Next.js performance, bundle size, data-fetching, rerender behavior, and App Router boundaries. Apply only the rules that fit this repo's current dependency set.
 
 ## Frontend Rules
 
@@ -87,6 +87,25 @@ For protected actions, use `src/lib/auth-session.ts` unless the task deliberatel
 - `useAccessToken()` subscribes through `useSyncExternalStore`.
 - `runWithFreshAccessToken()` refreshes and retries once after a `401`.
 - Logout clears the stored development access token after calling the API.
+
+## Vercel Rules For MiniBlog
+
+Use the Vercel skill as a checklist, not as a replacement for project rules:
+
+- Apply `async-parallel` and `server-parallel-fetching` when independent page or component requests can start together.
+- Apply `async-defer-await` when an expensive request is only needed in one branch.
+- Apply `server-serialization` at server/client boundaries: pass only fields a client component actually renders or mutates.
+- Apply `bundle-dynamic-imports` only for heavy or rarely used client-only components. Do not split small forms or simple UI.
+- Apply `bundle-barrel-imports` if a new large package is introduced or an existing package has expensive barrel imports.
+- Apply `rerender-functional-setstate`, `rerender-derived-state-no-effect`, `rerender-dependencies`, and `rerender-no-inline-components` when editing client components with state, effects, callbacks, or nested component definitions.
+- Apply `client-localstorage-schema` through `src/lib/auth-session.ts`; keep localStorage access centralized and minimal.
+
+Do not apply these Vercel suggestions by default:
+
+- Do not add SWR or React Query for `client-swr-dedup`; use existing `src/lib/api` helpers unless the user approves a dependency and the lockfile is updated.
+- Do not add `next/dynamic` for components that are already small or needed for the first render.
+- Do not add caching that can leak authenticated data or conflict with refresh-token behavior.
+- Do not change API response shapes for frontend serialization wins without updating backend code, tests, and `docs/api-contract.md`.
 
 ## Responsive Rules
 

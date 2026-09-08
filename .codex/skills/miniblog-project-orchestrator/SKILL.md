@@ -37,7 +37,7 @@ When framework behavior is version-sensitive or unclear, consult official docs b
 
 Use external best-practice skills only as secondary guidance:
 
-- Use Vercel React/Next.js best practices for frontend performance, bundle, data-fetching, and App Router review.
+- Load `build-web-apps:react-best-practices` with `miniblog-frontend-nextjs` when frontend work touches React components, App Router pages, server/client data fetching, bundle size, rerender behavior, or performance-sensitive UI.
 - Do not add frontend libraries such as SWR, UI kits, or form libraries just because external guidance mentions them.
 - Use Microsoft or Azure Flask guidance only for Azure deployment, Microsoft identity, or Microsoft service integration.
 - For ordinary backend work, prefer official Flask, SQLAlchemy, Flask-Migrate, PyJWT, and MySQL/PyMySQL docs.
@@ -122,6 +122,7 @@ Use the focused skill when a subtask is contained:
 
 - Use `miniblog-backend-python` for backend-only Flask, model, migration, auth, validation, or unittest work.
 - Use `miniblog-frontend-nextjs` for frontend-only Next.js, React, Tailwind, route helper, API helper, or frontend test work.
+- Add `build-web-apps:react-best-practices` for frontend performance or refactor work, then apply only the Vercel rules that fit MiniBlog's plain Next.js/React dependency set.
 - Stay in this orchestrator skill for contract changes, auth flow changes across layers, feature flow planning, Docker/runtime coordination, or cross-app debugging.
 
 ## Verification Matrix

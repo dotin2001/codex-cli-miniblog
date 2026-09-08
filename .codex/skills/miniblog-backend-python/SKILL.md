@@ -51,6 +51,13 @@ When framework behavior is version-sensitive or unclear, consult official docs b
 
 Use Microsoft or Azure Flask guidance only when the task explicitly involves Azure deployment, Microsoft identity, Azure MySQL, Key Vault, App Service, or another Microsoft service. For ordinary backend changes, use the MiniBlog docs plus official Flask ecosystem documentation.
 
+Use generic `python-flask-mysql-backend` guidance only as secondary review input for architecture, SQLAlchemy, auth, migrations, and production hardening. MiniBlog-specific rules override it:
+
+- Use PyJWT directly; do not introduce Flask-JWT-Extended unless the user asks for that migration.
+- Do not assume python-dotenv; configuration comes from environment variables and `app/config.py`.
+- Do not force `services/`, `schemas/`, `middleware/`, or `utils/` directories unless they remove real duplication or match an active refactor.
+- Preserve the current error envelope instead of switching to generic `{ success, data, errors }` shapes.
+
 ## Backend Rules
 
 - Preserve the Flask app factory in `app/__init__.py` and extension initialization through `app/extensions.py`.
@@ -66,6 +73,7 @@ Use Microsoft or Azure Flask guidance only when the task explicitly involves Azu
 - Do not mix frontend logic into backend.
 - Keep tests using in-memory SQLite unless the test specifically verifies MySQL/runtime configuration.
 - Keep runtime database behavior MySQL-compatible.
+- Keep database writes explicit. Roll back on handled write failures that can leave the session unusable.
 
 ## API Rules
 
@@ -120,6 +128,14 @@ Database facts to preserve:
 - Existing tables are `users`, `blogs`, and `comments`.
 - Blog statuses are exactly `draft` and `published`.
 
+Indexing guidance:
+
+- Current indexes are `users.email` and `blogs.slug`.
+- Consider `blogs(status, created_at, id)` when public blog list traffic grows.
+- Consider `blogs(author_id, created_at, id)` when dashboard blog list traffic grows.
+- Consider `comments(blog_id, created_at, id)` when comment list traffic grows.
+- Add indexes only with a migration and `docs/database.md` update.
+
 ## Auth Rules
 
 For auth changes:
@@ -142,6 +158,13 @@ Current auth behavior to preserve unless the task explicitly changes it:
 - Logout clears the refresh cookie but does not revoke existing access tokens.
 - There is no database-backed refresh-token table.
 - Production-like envs must reject empty, short, or placeholder `JWT_SECRET_KEY` values.
+
+Future production hardening that fits this project:
+
+- Add database-backed refresh-token sessions when logout revocation, device sessions, or token rotation become required.
+- Store only hashed refresh-token identifiers or JTIs if refresh-token persistence is added.
+- Keep access tokens short-lived and refresh tokens scoped to the configured HTTP-only cookie path.
+- Verify cookie flags and CORS together for browser auth changes.
 
 Cookie defaults:
 

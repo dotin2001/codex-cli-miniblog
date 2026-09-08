@@ -33,6 +33,7 @@ Repo-specific docs and skills are the primary source of truth. Use external best
 
 - Vercel React/Next.js best practices are suitable for frontend performance, bundle, data-fetching, and App Router reviews in `apps/web`.
 - Do not add frontend libraries such as SWR, component libraries, or form libraries just because external guidance mentions them.
+- Generic Python Flask MySQL backend guidance is suitable for backend architecture, SQLAlchemy, auth, migration, and production-hardening review, but project-specific MiniBlog rules override generic assumptions.
 - Microsoft or Azure Flask guidance is suitable only for Azure deployment or Microsoft service integration. For normal backend work, prefer the MiniBlog backend skill and official Flask, SQLAlchemy, Flask-Migrate, PyJWT, and MySQL/PyMySQL docs.
 - When improving agent instructions, update durable Markdown context first, then align `.codex/skills/*/SKILL.md`.
 
