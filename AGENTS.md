@@ -14,7 +14,12 @@ Before working on this repository, read the relevant project context:
 
 ## Skill Routing
 
-This repository intentionally keeps its repo-specific Codex skills in `.codex/skills`. Use the correct skill depending on the task type:
+This repository has two local skill homes with different ownership:
+
+- `.codex/skills` contains MiniBlog-owned project skills. These are maintained with this repository and should change when MiniBlog docs, stack facts, or workflows change.
+- `.agents/skills` contains generated OpenSpec workflow skills. These support planning and change lifecycle work and should usually be updated by the OpenSpec installer or CLI rather than hand-edited.
+
+Use the correct MiniBlog skill depending on the task type:
 
 - `.codex/skills/miniblog-project-orchestrator/SKILL.md`
   - Use for full-stack tasks
@@ -29,6 +34,19 @@ This repository intentionally keeps its repo-specific Codex skills in `.codex/sk
   - Use for backend tasks
   - Use for Flask, Python, MySQL, SQLAlchemy, migrations, API routes, validation, auth, JWT, and backend tests
 
+Use the correct OpenSpec workflow skill when the task is about planning or applying an OpenSpec change:
+
+- `$openspec-explore` for thinking through an idea, investigating options, or clarifying requirements before implementation.
+- `$openspec-propose` for creating a complete OpenSpec change proposal with design, specs, and tasks.
+- `$openspec-apply-change` for implementing tasks from an existing OpenSpec change.
+- `$openspec-update-change` for revising existing OpenSpec planning artifacts without editing code.
+- `$openspec-sync-specs` for syncing delta specs to main specs without archiving.
+- `$openspec-archive-change` for archiving a completed implemented change.
+
+Only the OpenSpec workflow skills listed above are installed in this repository. If generated skill text mentions optional workflows such as `$openspec-continue-change` or `$openspec-new-change`, treat them as unavailable here unless they are later added under `.agents/skills`.
+
+In Codex, invoke these generated workflow skills with the `$openspec-*` form. Slash aliases such as `/opsx:*`, `/opsx-*`, and `/openspec-*` are host-dependent and are not guaranteed Codex commands unless the current environment separately installs them.
+
 Repo-specific docs and skills are the primary source of truth. Use external best-practice skills only as secondary guidance:
 
 - Vercel React/Next.js best practices are suitable for frontend performance, bundle, data-fetching, and App Router reviews in `apps/web`.
@@ -36,6 +54,7 @@ Repo-specific docs and skills are the primary source of truth. Use external best
 - Generic Python Flask MySQL backend guidance is suitable for backend architecture, SQLAlchemy, auth, migration, and production-hardening review, but project-specific MiniBlog rules override generic assumptions.
 - Microsoft or Azure Flask guidance is suitable only for Azure deployment or Microsoft service integration. For normal backend work, prefer the MiniBlog backend skill and official Flask, SQLAlchemy, Flask-Migrate, PyJWT, and MySQL/PyMySQL docs.
 - When improving agent instructions, update durable Markdown context first, then align `.codex/skills/*/SKILL.md`.
+- When reviewing `.agents/skills/openspec-*/SKILL.md`, prefer documenting local usage here or in `.codex/project.md`; hand-edit generated workflow mechanics only for an intentional local patch.
 
 ## Working Rules
 

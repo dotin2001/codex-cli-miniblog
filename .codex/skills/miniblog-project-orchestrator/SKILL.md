@@ -1,13 +1,13 @@
 ---
 name: miniblog-project-orchestrator
-description: Use this skill when a MiniBlog task affects both frontend and backend, shared project docs, or repo AI instructions/skills, including API contract changes, authentication and refresh-token flow, blog CRUD, comments, user profile, database-backed UI changes, Docker/runtime coordination, cross-app debugging, or aligning AGENTS.md and .codex/skills guidance.
+description: Use this skill when a MiniBlog task affects both frontend and backend, shared project docs, or repo AI instructions/skills, including API contract changes, authentication and refresh-token flow, blog CRUD, comments, user profile, database-backed UI changes, Docker/runtime coordination, cross-app debugging, or aligning AGENTS.md, .codex/skills, and OpenSpec workflow guidance.
 ---
 
 # MiniBlog Project Orchestrator
 
 ## Purpose
 
-Coordinate full-stack MiniBlog work across `apps/web`, `apps/api`, shared docs, and Docker runtime configuration.
+Coordinate full-stack MiniBlog work across `apps/web`, `apps/api`, shared docs, repo-local agent guidance, and Docker runtime configuration.
 
 Use this skill when the task affects both frontend and backend, or when a backend/API/database/auth change must be reflected in frontend helpers, UI, tests, and docs.
 
@@ -23,6 +23,7 @@ Before editing code, read:
 - `docs/database.md` if models or migrations are involved
 - `apps/api/AGENTS.md` if backend files are involved
 - `apps/web/AGENTS.md` if frontend files are involved
+- `.agents/skills/openspec-*/SKILL.md` when reviewing OpenSpec workflow guidance
 - The relevant frontend API helper/component files
 - The relevant backend route/model/test/migration files
 
@@ -83,10 +84,12 @@ Runtime:
 For AI instruction or skill maintenance:
 
 1. Review the codebase facts that the instructions describe.
-2. Update durable Markdown context first, such as `AGENTS.md`, `.codex/project.md`, app `AGENTS.md`, and `docs/*`.
-3. Update `.codex/skills/*/SKILL.md` after the docs express the intended source of truth.
-4. Keep skills concise and procedural; do not duplicate large docs inside skills.
-5. Validate skill frontmatter and naming after edits.
+2. Inventory both skill homes: MiniBlog-owned skills under `.codex/skills` and generated OpenSpec workflow skills under `.agents/skills`.
+3. Update durable Markdown context first, such as `AGENTS.md`, `.codex/project.md`, app `AGENTS.md`, and `docs/*`.
+4. Update `.codex/skills/*/SKILL.md` after the docs express the intended source of truth.
+5. Prefer documenting local OpenSpec workflow usage in durable docs; hand-edit `.agents/skills/openspec-*/SKILL.md` only for an intentional local patch.
+6. Keep skills concise and procedural; do not duplicate large docs inside skills.
+7. Validate changed skill frontmatter, names, routing boundaries, and absence of placeholders after edits.
 
 ## Rules
 
@@ -100,6 +103,7 @@ For AI instruction or skill maintenance:
 - Do not widen CORS, weaken JWT handling, or relax cookie/security settings without explicit reason.
 - Do not invent Docker services that are not in Compose.
 - Do not edit generated framework files such as `apps/web/next-env.d.ts` unless that generated file is the explicit task.
+- Do not hand-edit generated OpenSpec workflow mechanics when a durable documentation update can resolve the local guidance issue.
 
 ## Cross-Layer Contracts
 
@@ -124,6 +128,7 @@ Use the focused skill when a subtask is contained:
 - Use `miniblog-frontend-nextjs` for frontend-only Next.js, React, Tailwind, route helper, API helper, or frontend test work.
 - Add `build-web-apps:react-best-practices` for frontend performance or refactor work, then apply only the Vercel rules that fit MiniBlog's plain Next.js/React dependency set.
 - Stay in this orchestrator skill for contract changes, auth flow changes across layers, feature flow planning, Docker/runtime coordination, or cross-app debugging.
+- Use generated `$openspec-*` workflow skills from `.agents/skills` for OpenSpec explore, propose, apply, update, sync, and archive tasks. Slash aliases are host-dependent and not guaranteed in Codex.
 
 ## Verification Matrix
 

@@ -9,7 +9,8 @@ The project is separated into:
 - Frontend: `apps/web`
 - Backend: `apps/api`
 - Shared documentation: `docs`
-- Codex instructions and skills: `.codex`
+- MiniBlog Codex context and project-owned skills: `.codex`
+- Generated OpenSpec workflow skills: `.agents/skills`
 
 ## Main Features
 
@@ -60,7 +61,9 @@ miniblog-project/
 │   ├── web/
 │   └── api/
 ├── docs/
-├── .codex/
+├── .codex/        # MiniBlog project context and project-owned skills
+├── .agents/       # Generated OpenSpec workflow skills
+├── openspec/      # OpenSpec changes and specs
 ├── AGENTS.md
 ├── docker-compose.yml
 ├── .env.example
@@ -99,6 +102,7 @@ Backend handles:
 - Do not expose secrets.
 - Do not change unrelated files.
 - Keep API, auth, database, and runtime docs synchronized with behavior changes.
-- Keep repo-specific skills synchronized after durable Markdown docs are updated.
+- Keep MiniBlog-owned skills under `.codex/skills` synchronized after durable Markdown docs are updated.
+- Treat `.agents/skills` as generated OpenSpec workflow guidance; document local usage in durable docs before hand-editing generated workflow mechanics.
 
 ---

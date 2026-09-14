@@ -12,7 +12,9 @@ codex-cli-miniblog/
 │   ├── web/      # Next.js frontend
 │   └── api/      # Flask backend
 ├── docs/         # Architecture, API, auth, and database documentation
-├── .codex/       # Project context and agent skills
+├── .codex/       # MiniBlog project context and project-owned skills
+├── .agents/      # Generated OpenSpec workflow skills
+├── openspec/     # OpenSpec changes and specs
 └── README.md
 ```
 
@@ -193,3 +195,10 @@ See:
 - `docs/api-contract.md`
 - `docs/auth-flow.md`
 - `docs/database.md`
+
+Agent and workflow guidance:
+
+- `AGENTS.md`
+- `.codex/project.md`
+- `.codex/skills`
+- `.agents/skills`
