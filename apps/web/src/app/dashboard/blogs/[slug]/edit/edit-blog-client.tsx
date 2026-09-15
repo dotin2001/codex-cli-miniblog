@@ -436,6 +436,13 @@ function EditBlogForm({
           placeholder="A short summary for readers."
           rows={3}
         />
+        <TextField
+          defaultValue={blog.tags.map((tag) => tag.name).join(", ")}
+          error={error?.fields?.tags}
+          label="Tags"
+          name="tags"
+          placeholder="Python, Flask, Notes"
+        />
         <TextAreaField
           defaultValue={blog.content}
           error={error?.fields?.content}
@@ -671,6 +678,7 @@ function getPayload(formData: FormData): UpdateBlogPayload {
     content: getFormValue(formData, "content"),
     excerpt: getFormValue(formData, "excerpt").trim() || null,
     status: getStatus(formData),
+    tags: getTags(formData),
     title: getFormValue(formData, "title"),
   };
 }
@@ -685,6 +693,13 @@ function getFormValue(formData: FormData, key: string): string {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+function getTags(formData: FormData): string[] {
+  return getFormValue(formData, "tags")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function isNotFoundError(error: unknown): boolean {

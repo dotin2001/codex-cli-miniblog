@@ -1,6 +1,7 @@
 from sqlalchemy.sql import func
 
 from app.extensions import db
+from app.models.tag import blog_tags
 
 
 class Blog(db.Model):
@@ -50,4 +51,9 @@ class Blog(db.Model):
         "Comment",
         back_populates="blog",
         cascade="all, delete-orphan",
+    )
+    tags = db.relationship(
+        "Tag",
+        secondary=blog_tags,
+        back_populates="blogs",
     )

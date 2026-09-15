@@ -5,12 +5,13 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.auth import current_user_from_authorization_header
 from app.extensions import db
 from app.models.blog import Blog
 from app.models.comment import Comment
+from app.models.tag import Tag
 from app.models.user import User
 
 blogs_bp = Blueprint("blogs", __name__, url_prefix="/blogs")
@@ -22,6 +23,8 @@ DEFAULT_PAGE = 1
 DEFAULT_PER_PAGE = 10
 MAX_PER_PAGE = 50
 MAX_SLUG_WRITE_ATTEMPTS = 5
+MAX_TAGS_PER_BLOG = 10
+MAX_TAG_NAME_LENGTH = 40
 
 
 def _error_response(
@@ -87,9 +90,9 @@ def _view_forbidden_error():
 
 def _validate_create_blog_payload(
     payload: Any,
-) -> tuple[dict[str, str | None], dict[str, str]]:
+) -> tuple[dict[str, Any], dict[str, str]]:
     fields: dict[str, str] = {}
-    data: dict[str, str | None] = {}
+    data: dict[str, Any] = {}
 
     if not isinstance(payload, dict):
         return data, {"body": "Request body must be a JSON object."}
@@ -131,14 +134,23 @@ def _validate_create_blog_payload(
     else:
         data["status"] = status
 
+    if "tags" in payload:
+        tags, tags_error = _validate_tags(payload.get("tags"))
+        if tags_error is not None:
+            fields["tags"] = tags_error
+        else:
+            data["tags"] = tags
+    else:
+        data["tags"] = []
+
     return data, fields
 
 
 def _validate_update_blog_payload(
     payload: Any,
-) -> tuple[dict[str, str | None], dict[str, str]]:
+) -> tuple[dict[str, Any], dict[str, str]]:
     fields: dict[str, str] = {}
-    data: dict[str, str | None] = {}
+    data: dict[str, Any] = {}
 
     if not isinstance(payload, dict):
         return data, {"body": "Request body must be a JSON object."}
@@ -184,6 +196,13 @@ def _validate_update_blog_payload(
         else:
             data["status"] = status
 
+    if "tags" in payload:
+        tags, tags_error = _validate_tags(payload.get("tags"))
+        if tags_error is not None:
+            fields["tags"] = tags_error
+        else:
+            data["tags"] = tags
+
     return data, fields
 
 
@@ -208,6 +227,64 @@ def _validate_create_comment_payload(
 
 def _slug_base(title: str) -> str:
     return SLUG_PATTERN.sub("-", title.lower()).strip("-")
+
+
+def _normalize_tag_name(value: str) -> str:
+    return " ".join(value.strip().split())
+
+
+def _validate_tags(raw_tags: Any) -> tuple[list[dict[str, str]], str | None]:
+    if not isinstance(raw_tags, list):
+        return [], "Tags must be an array of strings."
+
+    tags: list[dict[str, str]] = []
+    seen_slugs: set[str] = set()
+
+    for raw_tag in raw_tags:
+        if not isinstance(raw_tag, str):
+            return [], "Tags must be an array of strings."
+
+        name = _normalize_tag_name(raw_tag)
+        if not name:
+            return [], "Tags cannot include blank names."
+
+        if len(name) > MAX_TAG_NAME_LENGTH:
+            return [], f"Each tag must be {MAX_TAG_NAME_LENGTH} characters or fewer."
+
+        slug = _slug_base(name)
+        if not slug:
+            return [], "Tags must include letters or numbers."
+
+        if slug in seen_slugs:
+            continue
+
+        seen_slugs.add(slug)
+        tags.append({"name": name, "slug": slug})
+
+    if len(tags) > MAX_TAGS_PER_BLOG:
+        return [], f"A blog can have at most {MAX_TAGS_PER_BLOG} tags."
+
+    return tags, None
+
+
+def _tag_models_for_inputs(tag_inputs: list[dict[str, str]]) -> list[Tag]:
+    if not tag_inputs:
+        return []
+
+    slugs = [tag_input["slug"] for tag_input in tag_inputs]
+    existing_tags = Tag.query.filter(Tag.slug.in_(slugs)).all()
+    tags_by_slug = {tag.slug: tag for tag in existing_tags}
+    tags: list[Tag] = []
+
+    for tag_input in tag_inputs:
+        tag = tags_by_slug.get(tag_input["slug"])
+        if tag is None:
+            tag = Tag(name=tag_input["name"], slug=tag_input["slug"])
+            db.session.add(tag)
+            tags_by_slug[tag.slug] = tag
+        tags.append(tag)
+
+    return tags
 
 
 def _unique_slug(
@@ -237,7 +314,7 @@ def _is_slug_integrity_error(error: IntegrityError) -> bool:
 
 
 def _commit_new_blog_with_slug_retry(
-    data: dict[str, str | None],
+    data: dict[str, Any],
     author_id: int,
 ) -> tuple[Blog | None, Any]:
     rejected_slugs: set[str] = set()
@@ -252,6 +329,7 @@ def _commit_new_blog_with_slug_retry(
             status=data["status"],
             author_id=author_id,
         )
+        blog.tags = _tag_models_for_inputs(data.get("tags", []))
         db.session.add(blog)
 
         try:
@@ -268,7 +346,7 @@ def _commit_new_blog_with_slug_retry(
 
 def _apply_blog_update(
     blog: Blog,
-    data: dict[str, str | None],
+    data: dict[str, Any],
     rejected_slugs: set[str],
 ) -> str | None:
     attempted_slug = None
@@ -293,12 +371,15 @@ def _apply_blog_update(
     if "status" in data:
         blog.status = data["status"]
 
+    if "tags" in data:
+        blog.tags = _tag_models_for_inputs(data["tags"])
+
     return attempted_slug
 
 
 def _commit_blog_update_with_slug_retry(
     blog: Blog,
-    data: dict[str, str | None],
+    data: dict[str, Any],
 ) -> tuple[Blog | None, Any]:
     blog_id = blog.id
     rejected_slugs: set[str] = set()
@@ -344,6 +425,14 @@ def _serialize_author(user: User) -> dict[str, Any]:
     }
 
 
+def _serialize_tag(tag: Tag) -> dict[str, Any]:
+    return {
+        "id": tag.id,
+        "name": tag.name,
+        "slug": tag.slug,
+    }
+
+
 def _serialize_blog(blog: Blog) -> dict[str, Any]:
     return {
         "id": blog.id,
@@ -355,6 +444,10 @@ def _serialize_blog(blog: Blog) -> dict[str, Any]:
         "authorId": blog.author_id,
         "createdAt": blog.created_at.isoformat(),
         "updatedAt": blog.updated_at.isoformat(),
+        "tags": [
+            _serialize_tag(tag)
+            for tag in sorted(blog.tags, key=lambda tag: (tag.name.lower(), tag.id))
+        ],
     }
 
 
@@ -409,7 +502,7 @@ def update_blog(slug: str):
     if user is None:
         return _authentication_error()
 
-    blog = Blog.query.filter_by(slug=slug).first()
+    blog = Blog.query.options(selectinload(Blog.tags)).filter_by(slug=slug).first()
     if blog is None:
         return _blog_not_found_error()
 
@@ -438,7 +531,7 @@ def delete_blog(slug: str):
     if user is None:
         return _authentication_error()
 
-    blog = Blog.query.filter_by(slug=slug).first()
+    blog = Blog.query.options(selectinload(Blog.tags)).filter_by(slug=slug).first()
     if blog is None:
         return _blog_not_found_error()
 
@@ -524,7 +617,7 @@ def list_my_blogs():
     page = _pagination_value("page", DEFAULT_PAGE)
     per_page = _pagination_value("perPage", DEFAULT_PER_PAGE, MAX_PER_PAGE)
     query = (
-        Blog.query.options(joinedload(Blog.author))
+        Blog.query.options(joinedload(Blog.author), selectinload(Blog.tags))
         .filter_by(author_id=user.id)
         .order_by(Blog.created_at.desc(), Blog.id.desc())
     )
@@ -549,11 +642,15 @@ def list_my_blogs():
 def list_blogs():
     page = _pagination_value("page", DEFAULT_PAGE)
     per_page = _pagination_value("perPage", DEFAULT_PER_PAGE, MAX_PER_PAGE)
+    tag_slug = (request.args.get("tag") or "").strip().lower()
     query = (
-        Blog.query.options(joinedload(Blog.author))
+        Blog.query.options(joinedload(Blog.author), selectinload(Blog.tags))
         .filter_by(status=Blog.STATUS_PUBLISHED)
         .order_by(Blog.created_at.desc(), Blog.id.desc())
     )
+    if tag_slug:
+        query = query.join(Blog.tags).filter(Tag.slug == tag_slug)
+
     total = query.count()
     blogs = query.offset((page - 1) * per_page).limit(per_page).all()
     total_pages = (total + per_page - 1) // per_page
@@ -574,7 +671,7 @@ def list_blogs():
 @blogs_bp.get("/<slug>")
 def get_blog(slug: str):
     blog = (
-        Blog.query.options(joinedload(Blog.author))
+        Blog.query.options(joinedload(Blog.author), selectinload(Blog.tags))
         .filter_by(slug=slug, status=Blog.STATUS_PUBLISHED)
         .first()
     )

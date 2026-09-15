@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { BlogTagList } from "@/components/blog-tag-list";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiRequestError, deleteBlog, getMyBlogs } from "@/lib/api/blogs";
 import type { Blog, Pagination } from "@/lib/api/blogs";
@@ -270,6 +271,7 @@ function BlogCard({
           <p className={`mt-4 line-clamp-3 text-base leading-7 ${ui.text}`}>
             {blog.excerpt ?? "No excerpt available."}
           </p>
+          <BlogTagList className="mt-4" tags={blog.tags} />
         </div>
         <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
           {isPublished ? (

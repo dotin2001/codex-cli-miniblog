@@ -145,6 +145,13 @@ function BlogForm({
           placeholder="A short summary for readers."
           rows={3}
         />
+        <TextField
+          autoComplete="off"
+          error={error?.fields?.tags}
+          label="Tags"
+          name="tags"
+          placeholder="Python, Flask, Notes"
+        />
         <TextAreaField
           error={error?.fields?.content}
           label="Content"
@@ -277,11 +284,13 @@ function FormErrorMessage({ error }: { error: FormError }) {
 
 function getPayload(formData: FormData): CreateBlogPayload {
   const excerpt = getFormValue(formData, "excerpt").trim();
+  const tags = getTags(formData);
 
   return {
     content: getFormValue(formData, "content"),
     ...(excerpt ? { excerpt } : {}),
     status: getStatus(formData),
+    ...(tags.length > 0 ? { tags } : {}),
     title: getFormValue(formData, "title")
   };
 }
@@ -296,6 +305,13 @@ function getFormValue(formData: FormData, key: string): string {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+function getTags(formData: FormData): string[] {
+  return getFormValue(formData, "tags")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function toFormError(error: unknown): FormError {

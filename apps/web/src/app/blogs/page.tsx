@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { CreateBlogCta } from "./create-blog-cta";
+import { BlogTagList } from "@/components/blog-tag-list";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiRequestError, getBlogs } from "@/lib/api/blogs";
 import type { Blog, Pagination } from "@/lib/api/blogs";
@@ -27,13 +28,24 @@ type BlogListState =
       status: "error";
     };
 
-export default async function BlogsPage() {
-  const state = await loadBlogs();
+type BlogsPageProps = {
+  searchParams?: Promise<{
+    tag?: string | string[];
+  }>;
+};
+
+export default async function BlogsPage({ searchParams }: BlogsPageProps) {
+  const activeTag = getActiveTag(await searchParams);
+  const state = await loadBlogs(activeTag);
 
   return (
     <BlogShell>
       {state.status === "success" ? (
-        <BlogList blogs={state.blogs} pagination={state.pagination} />
+        <BlogList
+          activeTag={activeTag}
+          blogs={state.blogs}
+          pagination={state.pagination}
+        />
       ) : (
         <section className="py-12 sm:py-16">
           <ErrorState message={state.message} />
@@ -43,9 +55,13 @@ export default async function BlogsPage() {
   );
 }
 
-async function loadBlogs(): Promise<BlogListState> {
+async function loadBlogs(activeTag: string | null): Promise<BlogListState> {
   try {
-    const { blogs, pagination } = await getBlogs({ page: 1, perPage: 10 });
+    const { blogs, pagination } = await getBlogs({
+      page: 1,
+      perPage: 10,
+      ...(activeTag ? { tag: activeTag } : {}),
+    });
 
     return { blogs, pagination, status: "success" };
   } catch (error) {
@@ -82,9 +98,11 @@ function BlogShell({ children }: { children: React.ReactNode }) {
 }
 
 function BlogList({
+  activeTag,
   blogs,
   pagination,
 }: {
+  activeTag: string | null;
   blogs: Blog[];
   pagination: Pagination;
 }) {
@@ -96,10 +114,12 @@ function BlogList({
             Published posts
           </p>
           <h1 className={`mt-4 text-balance text-4xl sm:text-5xl ${ui.title}`}>
-            Read the latest from MiniBlog.
+            {activeTag ? `Read posts tagged #${activeTag}.` : "Read the latest from MiniBlog."}
           </h1>
           <p className={`mt-5 max-w-xl text-base leading-8 sm:text-lg ${ui.text}`}>
-            Browse public stories shared by MiniBlog authors.
+            {activeTag
+              ? "Browse published stories that share this MiniBlog tag."
+              : "Browse public stories shared by MiniBlog authors."}
           </p>
         </div>
         <p className={`text-sm font-semibold ${ui.muted}`}>
@@ -141,6 +161,7 @@ function BlogCard({ blog }: { blog: Blog }) {
       <p className={`mt-4 line-clamp-3 flex-1 text-base leading-7 ${ui.text}`}>
         {blog.excerpt ?? "No excerpt available."}
       </p>
+      <BlogTagList className="mt-5" linked tags={blog.tags} />
       <Link
         className={`mt-6 min-h-10 w-fit px-4 ${ui.primaryButton}`}
         href={routes.blog(blog.slug)}
@@ -187,6 +208,17 @@ function getErrorMessage(error: unknown): string {
   }
 
   return "The blog list could not be loaded. Try again later.";
+}
+
+function getActiveTag(
+  searchParams: { tag?: string | string[] } | undefined,
+): string | null {
+  const rawTag = Array.isArray(searchParams?.tag)
+    ? searchParams?.tag[0]
+    : searchParams?.tag;
+  const tag = rawTag?.trim();
+
+  return tag ? tag : null;
 }
 
 function formatDate(value: string): string {

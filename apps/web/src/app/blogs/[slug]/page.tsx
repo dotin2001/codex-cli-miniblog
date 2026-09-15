@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BlogOwnerActions } from "./blog-owner-actions";
 import { CommentsSection } from "./comments-section";
+import { BlogTagList } from "@/components/blog-tag-list";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiRequestError, getBlog } from "@/lib/api/blogs";
 import type { Blog } from "@/lib/api/blogs";
@@ -167,6 +168,7 @@ function BlogArticle({ blog }: { blog: Blog }) {
             {blog.excerpt}
           </p>
         ) : null}
+        <BlogTagList className="mt-6" linked tags={blog.tags} />
       </div>
       <div className={`mt-8 p-6 sm:p-8 ${ui.surface}`}>
         <div className="whitespace-pre-wrap text-base leading-8 text-slate-800 dark:text-slate-200">

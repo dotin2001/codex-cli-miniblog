@@ -2,6 +2,7 @@
 
 from app.models.blog import Blog
 from app.models.comment import Comment
+from app.models.tag import Tag
 from app.models.user import User
 
-__all__ = ["Blog", "Comment", "User"]
+__all__ = ["Blog", "Comment", "Tag", "User"]

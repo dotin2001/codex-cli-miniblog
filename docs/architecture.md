@@ -27,11 +27,11 @@ Implemented frontend routes:
 - `/login`: login form. Successful login stores the development access token through the shared frontend auth-session helper and redirects to `/dashboard`.
 - `/register`: registration form. Registration does not automatically log the user in.
 - `/dashboard`: authenticated user summary from `GET /auth/me` and an entry point for creating a blog.
-- `/blogs`: public list of published blogs from `GET /blogs`.
-- `/blogs/[slug]`: public blog detail from `GET /blogs/:slug`, comments from `GET /blogs/:slug/comments`, authenticated comment creation, comment author-only edit/delete controls, and blog author-only edit/delete controls.
-- `/dashboard/blogs`: authenticated dashboard list of the current user's draft and published blogs from `GET /me/blogs`, with create, view, edit, and delete actions.
-- `/dashboard/blogs/new`: authenticated blog creation with draft or published status.
-- `/dashboard/blogs/[slug]/edit`: authenticated author-only blog editing. It loads through `GET /blogs/:slug/mine` so authors can edit drafts as well as published posts.
+- `/blogs`: public list of published blogs from `GET /blogs`, including optional tag filtering through `GET /blogs?tag=<tag-slug>`.
+- `/blogs/[slug]`: public blog detail from `GET /blogs/:slug`, displayed blog tags, comments from `GET /blogs/:slug/comments`, authenticated comment creation, comment author-only edit/delete controls, and blog author-only edit/delete controls.
+- `/dashboard/blogs`: authenticated dashboard list of the current user's draft and published blogs from `GET /me/blogs`, with tag display plus create, view, edit, and delete actions.
+- `/dashboard/blogs/new`: authenticated blog creation with draft or published status and optional tags.
+- `/dashboard/blogs/[slug]/edit`: authenticated author-only blog editing, including tag replacement. It loads through `GET /blogs/:slug/mine` so authors can edit drafts as well as published posts.
 
 Frontend API helpers live in:
 
@@ -79,10 +79,10 @@ Implemented backend route groups:
 - `GET /health`
 - Auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`
 - Me: `GET /me/blogs`
-- Blogs: `GET /blogs`, `GET /blogs/<slug>`, `GET /blogs/<slug>/mine`, `POST /blogs`, `PATCH /blogs/<slug>`, `DELETE /blogs/<slug>`
+- Blogs: `GET /blogs`, `GET /blogs?tag=<tag-slug>`, `GET /blogs/<slug>`, `GET /blogs/<slug>/mine`, `POST /blogs`, `PATCH /blogs/<slug>`, `DELETE /blogs/<slug>`
 - Comments: `GET /blogs/<slug>/comments`, `POST /blogs/<slug>/comments`, `PATCH /comments/<comment_id>`, `DELETE /comments/<comment_id>`
 
-Public blog read routes only return published blogs. `GET /me/blogs` returns the current authenticated user's draft and published blogs. Authenticated blog write routes can act on draft or published blogs when the current user is the author. `GET /blogs/<slug>/mine` is the dashboard author-only read route for drafts and published posts.
+Public blog read routes only return published blogs. `GET /blogs?tag=<tag-slug>` filters the published blog list to blogs associated with that tag. `GET /me/blogs` returns the current authenticated user's draft and published blogs. Authenticated blog write routes can act on draft or published blogs when the current user is the author. `GET /blogs/<slug>/mine` is the dashboard author-only read route for drafts and published posts.
 
 Comment reads and creates are scoped to published blogs. Comment update and delete require a valid bearer access token and only allow the comment author.
 
@@ -93,6 +93,8 @@ MiniBlog uses SQLAlchemy models and Flask-Migrate migrations for:
 - `users`
 - `blogs`
 - `comments`
+- `tags`
+- `blog_tags`
 
 Local development uses MySQL 8.0 from the root `docker-compose.yml`. Host-machine tools connect through `127.0.0.1:3307`; containers on the Docker Compose network connect through `mysql:3306`. The backend reads `DATABASE_URL`, then `SQLALCHEMY_DATABASE_URI`, and falls back to its built-in local MySQL URI when neither variable is set. Database URL normalization is scheme-only: `mysql://` is converted to `mysql+pymysql://`, and existing `mysql+pymysql://` URLs are left unchanged.
 

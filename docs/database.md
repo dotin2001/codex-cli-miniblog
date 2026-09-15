@@ -2,7 +2,7 @@
 
 MiniBlog is configured for local MySQL development through Docker Compose. The backend uses SQLAlchemy, Flask-Migrate, and the PyMySQL driver.
 
-The first application tables are `users`, `blogs`, and `comments`.
+The application tables are `users`, `blogs`, `comments`, `tags`, and `blog_tags`.
 
 ## Tables
 
@@ -26,7 +26,7 @@ Relationship:
 
 ### blogs
 
-Stores blog post records for blog CRUD. Comment create, list, update, and delete routes are implemented. Likes, categories, and tags are not implemented yet.
+Stores blog post records for blog CRUD. Comment create, list, update, and delete routes are implemented. Tags are implemented through reusable `tags` records and the `blog_tags` association table. Likes and categories are not implemented yet.
 
 | Column | Type | Constraints | Notes |
 | --- | --- | --- | --- |
@@ -45,6 +45,7 @@ Relationship:
 - Each blog belongs to one user through `blogs.author_id`.
 - One user can author many blogs.
 - One blog can have many comments through `comments.blog_id`; database-level blog deletion cascades to owned comments.
+- One blog can have many tags through `blog_tags.blog_id`; database-level blog deletion cascades to owned blog-tag associations.
 
 ### comments
 
@@ -66,6 +67,36 @@ Relationship:
 - One user can author many comments.
 - One blog can have many comments.
 
+### tags
+
+Stores reusable tag records for blog topics. Blog create and update requests accept tag names; the backend normalizes each tag to a unique slug and reuses an existing tag when the slug already exists.
+
+| Column | Type | Constraints | Notes |
+| --- | --- | --- | --- |
+| `id` | integer | primary key | Internal tag identifier. |
+| `name` | string(40) | not null | Display name shown in blog responses and UI. |
+| `slug` | string(40) | not null, unique, indexed | URL-safe tag identifier used by `GET /blogs?tag=<tag-slug>`. |
+| `created_at` | datetime | not null, default current timestamp | Record creation timestamp. |
+| `updated_at` | datetime | not null, default current timestamp | Record update timestamp. |
+
+Relationship:
+
+- One tag can be associated with many blogs through `blog_tags.tag_id`.
+
+### blog_tags
+
+Associates blogs with reusable tags.
+
+| Column | Type | Constraints | Notes |
+| --- | --- | --- | --- |
+| `blog_id` | integer | primary key, foreign key to `blogs.id` | Blog associated with the tag. |
+| `tag_id` | integer | primary key, foreign key to `tags.id` | Tag associated with the blog. |
+
+Relationship:
+
+- Each row links one blog to one tag.
+- `(blog_id, tag_id)` is unique through the composite primary key and explicit unique constraint.
+
 ## Indexing Guidance
 
 Current schema indexes:
@@ -75,6 +106,8 @@ Current schema indexes:
 - `blogs(status, created_at, id)` for `GET /blogs`, which filters published posts and sorts newest first.
 - `blogs(author_id, created_at, id)` for `GET /me/blogs`, which filters by author and sorts newest first.
 - `comments(blog_id, created_at, id)` for `GET /blogs/:slug/comments`, which filters by blog and sorts oldest first.
+- `tags.slug` is unique and indexed for tag lookup and public tag filtering.
+- `blog_tags(tag_id, blog_id)` supports `GET /blogs?tag=<tag-slug>` joins from a tag to associated blogs.
 
 When list traffic grows beyond the current route patterns, add indexes through Flask-Migrate migrations rather than changing models only. High-value future candidates include:
 
@@ -89,8 +122,10 @@ Current database-level delete behavior:
 - `blogs.author_id -> users.id` restricts user deletion while authored blogs exist.
 - `comments.author_id -> users.id` restricts user deletion while authored comments exist.
 - `comments.blog_id -> blogs.id` cascades blog deletion to owned comments.
+- `blog_tags.blog_id -> blogs.id` cascades blog deletion to owned blog-tag associations.
+- `blog_tags.tag_id -> tags.id` cascades tag deletion to owned blog-tag associations.
 
-The ORM also cascades blog deletion to comments through the `Blog.comments` relationship, so application deletes and direct database constraint behavior both remove comments owned by a deleted blog.
+The ORM also cascades blog deletion to comments through the `Blog.comments` relationship. Blog-tag associations are removed through the `blog_tags` foreign-key cascade when a blog is deleted.
 
 ## Schema Evolution Rules
 
