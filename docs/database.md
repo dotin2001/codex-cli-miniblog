@@ -21,8 +21,8 @@ Stores user account records for authentication flows. Registration stores secure
 
 Relationship:
 
-- One user can author many blog records through `blogs.author_id`.
-- One user can author many comment records through `comments.author_id`.
+- One user can author many blog records through `blogs.author_id`; database-level user deletion is restricted while authored blogs exist.
+- One user can author many comment records through `comments.author_id`; database-level user deletion is restricted while authored comments exist.
 
 ### blogs
 
@@ -44,7 +44,7 @@ Relationship:
 
 - Each blog belongs to one user through `blogs.author_id`.
 - One user can author many blogs.
-- One blog can have many comments through `comments.blog_id`.
+- One blog can have many comments through `comments.blog_id`; database-level blog deletion cascades to owned comments.
 
 ### comments
 
@@ -72,15 +72,25 @@ Current schema indexes:
 
 - `users.email` is unique and indexed for registration and login lookup.
 - `blogs.slug` is unique and indexed for public detail, author edit, update, and delete routes.
-
-When list traffic grows, add indexes through Flask-Migrate migrations rather than changing models only. High-value candidates for the current query patterns are:
-
 - `blogs(status, created_at, id)` for `GET /blogs`, which filters published posts and sorts newest first.
 - `blogs(author_id, created_at, id)` for `GET /me/blogs`, which filters by author and sorts newest first.
 - `comments(blog_id, created_at, id)` for `GET /blogs/:slug/comments`, which filters by blog and sorts oldest first.
+
+When list traffic grows beyond the current route patterns, add indexes through Flask-Migrate migrations rather than changing models only. High-value future candidates include:
+
 - `comments(author_id)` only if user comment history or moderation views are added.
 
-Do not document these candidates as current schema until a matching migration exists.
+Do not document future candidates as current schema until a matching migration exists.
+
+## Foreign Key Delete Behavior
+
+Current database-level delete behavior:
+
+- `blogs.author_id -> users.id` restricts user deletion while authored blogs exist.
+- `comments.author_id -> users.id` restricts user deletion while authored comments exist.
+- `comments.blog_id -> blogs.id` cascades blog deletion to owned comments.
+
+The ORM also cascades blog deletion to comments through the `Blog.comments` relationship, so application deletes and direct database constraint behavior both remove comments owned by a deleted blog.
 
 ## Schema Evolution Rules
 

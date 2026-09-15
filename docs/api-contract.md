@@ -1082,6 +1082,7 @@ Validation:
 - `status` is optional and defaults to `draft`.
 - `status` must be `draft` or `published` when provided.
 - `slug` is generated from `title` and made unique by appending a numeric suffix when needed.
+- Late duplicate slug collisions during persistence are retried with the next available suffix.
 - `authorId` is set from the authenticated user and cannot be supplied by the client.
 
 Success response:
@@ -1149,6 +1150,25 @@ Status code:
 
 The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
 
+Slug conflict response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_SLUG_CONFLICT",
+    "message": "Could not allocate a unique blog slug. Please try a different title."
+  }
+}
+```
+
+Status code:
+
+```text
+409 Conflict
+```
+
+The slug conflict response is returned only if repeated late duplicate slug collisions prevent the backend from allocating a unique generated slug after bounded retries.
+
 Example:
 
 ```bash
@@ -1185,6 +1205,7 @@ Validation:
 - `title`, when provided, is trimmed before storage, must not be blank, must be 255 characters or fewer, and must contain letters or numbers so a slug can be generated.
 - The blog `slug` is regenerated only when `title` changes.
 - Regenerated slugs are made unique by appending a numeric suffix when needed.
+- Late duplicate slug collisions during persistence are retried with the next available suffix.
 - `content`, when provided, is trimmed before storage and must not be blank.
 - `excerpt`, when provided, is trimmed before storage, stored as `null` when blank or `null`, and must be 500 characters or fewer.
 - `status`, when provided, must be `draft` or `published`.
@@ -1286,6 +1307,25 @@ Status code:
 ```text
 404 Not Found
 ```
+
+Slug conflict response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_SLUG_CONFLICT",
+    "message": "Could not allocate a unique blog slug. Please try a different title."
+  }
+}
+```
+
+Status code:
+
+```text
+409 Conflict
+```
+
+The slug conflict response is returned only if repeated late duplicate slug collisions prevent the backend from allocating a unique regenerated slug after bounded retries.
 
 Example:
 

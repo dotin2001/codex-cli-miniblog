@@ -10,6 +10,8 @@ class Blog(db.Model):
             "status IN ('draft', 'published')",
             name="ck_blogs_status",
         ),
+        db.Index("ix_blogs_status_created_at_id", "status", "created_at", "id"),
+        db.Index("ix_blogs_author_id_created_at_id", "author_id", "created_at", "id"),
     )
 
     STATUS_DRAFT = "draft"
@@ -26,7 +28,11 @@ class Blog(db.Model):
         default=STATUS_DRAFT,
         server_default=STATUS_DRAFT,
     )
-    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    author_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,

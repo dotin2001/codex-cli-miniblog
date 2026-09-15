@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 import unittest
 
 import jwt
@@ -8,6 +9,7 @@ from app import create_app
 from app.extensions import db
 from app.models.blog import Blog
 from app.models.user import User
+from app.routes import blogs as blog_routes
 
 
 class TestConfig:
@@ -117,6 +119,46 @@ class CreateBlogEndpointTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()["blog"]["slug"], "same-title-2")
         self.assertEqual(response.get_json()["blog"]["status"], "draft")
         self.assertIsNone(response.get_json()["blog"]["excerpt"])
+
+    def test_create_blog_retries_late_duplicate_slug_collision(self):
+        with self.app.app_context():
+            db.session.add(
+                Blog(
+                    title="Race Title",
+                    slug="race-title",
+                    content="Existing content",
+                    author_id=1,
+                )
+            )
+            db.session.commit()
+
+        real_unique_slug = blog_routes._unique_slug
+        calls = 0
+
+        def colliding_slug(title, exclude_blog_id=None, rejected_slugs=None):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return "race-title"
+
+            return real_unique_slug(
+                title,
+                exclude_blog_id=exclude_blog_id,
+                rejected_slugs=rejected_slugs,
+            )
+
+        with patch.object(blog_routes, "_unique_slug", side_effect=colliding_slug):
+            response = self.client.post(
+                "/blogs",
+                headers=self._auth_headers(),
+                json={"title": "Race Title", "content": "New content"},
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()["blog"]["slug"], "race-title-2")
+
+        with self.app.app_context():
+            self.assertEqual(Blog.query.filter_by(slug="race-title-2").count(), 1)
 
     def test_create_blog_requires_valid_bearer_token(self):
         response = self.client.post(

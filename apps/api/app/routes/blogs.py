@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from flask import Blueprint, jsonify, request
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app.auth import current_user_from_authorization_header
@@ -20,6 +21,7 @@ VALID_STATUSES = {Blog.STATUS_DRAFT, Blog.STATUS_PUBLISHED}
 DEFAULT_PAGE = 1
 DEFAULT_PER_PAGE = 10
 MAX_PER_PAGE = 50
+MAX_SLUG_WRITE_ATTEMPTS = 5
 
 
 def _error_response(
@@ -64,6 +66,14 @@ def _delete_forbidden_error():
         403,
         "FORBIDDEN",
         "Only the blog author can delete this blog.",
+    )
+
+
+def _slug_conflict_error():
+    return _error_response(
+        409,
+        "BLOG_SLUG_CONFLICT",
+        "Could not allocate a unique blog slug. Please try a different title.",
     )
 
 
@@ -200,18 +210,116 @@ def _slug_base(title: str) -> str:
     return SLUG_PATTERN.sub("-", title.lower()).strip("-")
 
 
-def _unique_slug(title: str, exclude_blog_id: int | None = None) -> str:
+def _unique_slug(
+    title: str,
+    exclude_blog_id: int | None = None,
+    rejected_slugs: set[str] | None = None,
+) -> str:
     base_slug = _slug_base(title)
     slug = base_slug
     suffix = 2
+    rejected_slugs = rejected_slugs or set()
 
     while True:
         existing_blog = Blog.query.filter_by(slug=slug).first()
-        if existing_blog is None or existing_blog.id == exclude_blog_id:
+        if slug not in rejected_slugs and (
+            existing_blog is None or existing_blog.id == exclude_blog_id
+        ):
             return slug
 
         slug = f"{base_slug}-{suffix}"
         suffix += 1
+
+
+def _is_slug_integrity_error(error: IntegrityError) -> bool:
+    message = str(error).lower()
+    return "slug" in message and ("unique" in message or "duplicate" in message)
+
+
+def _commit_new_blog_with_slug_retry(
+    data: dict[str, str | None],
+    author_id: int,
+) -> tuple[Blog | None, Any]:
+    rejected_slugs: set[str] = set()
+
+    for _ in range(MAX_SLUG_WRITE_ATTEMPTS):
+        slug = _unique_slug(data["title"], rejected_slugs=rejected_slugs)
+        blog = Blog(
+            title=data["title"],
+            slug=slug,
+            excerpt=data["excerpt"],
+            content=data["content"],
+            status=data["status"],
+            author_id=author_id,
+        )
+        db.session.add(blog)
+
+        try:
+            db.session.commit()
+            return blog, None
+        except IntegrityError as error:
+            db.session.rollback()
+            if not _is_slug_integrity_error(error):
+                raise
+            rejected_slugs.add(slug)
+
+    return None, _slug_conflict_error()
+
+
+def _apply_blog_update(
+    blog: Blog,
+    data: dict[str, str | None],
+    rejected_slugs: set[str],
+) -> str | None:
+    attempted_slug = None
+
+    if "title" in data:
+        title = data["title"]
+        if title != blog.title:
+            blog.title = title
+            blog.slug = _unique_slug(
+                title,
+                exclude_blog_id=blog.id,
+                rejected_slugs=rejected_slugs,
+            )
+            attempted_slug = blog.slug
+
+    if "excerpt" in data:
+        blog.excerpt = data["excerpt"]
+
+    if "content" in data:
+        blog.content = data["content"]
+
+    if "status" in data:
+        blog.status = data["status"]
+
+    return attempted_slug
+
+
+def _commit_blog_update_with_slug_retry(
+    blog: Blog,
+    data: dict[str, str | None],
+) -> tuple[Blog | None, Any]:
+    blog_id = blog.id
+    rejected_slugs: set[str] = set()
+
+    for _ in range(MAX_SLUG_WRITE_ATTEMPTS):
+        current_blog = db.session.get(Blog, blog_id)
+        if current_blog is None:
+            return None, _blog_not_found_error()
+
+        attempted_slug = _apply_blog_update(current_blog, data, rejected_slugs)
+
+        try:
+            db.session.commit()
+            return current_blog, None
+        except IntegrityError as error:
+            db.session.rollback()
+            if attempted_slug is None or not _is_slug_integrity_error(error):
+                raise
+            rejected_slugs.add(attempted_slug)
+
+    return None, _slug_conflict_error()
 
 
 def _pagination_value(name: str, default: int, maximum: int | None = None) -> int:
@@ -288,16 +396,9 @@ def create_blog():
             fields,
         )
 
-    blog = Blog(
-        title=data["title"],
-        slug=_unique_slug(data["title"]),
-        excerpt=data["excerpt"],
-        content=data["content"],
-        status=data["status"],
-        author_id=user.id,
-    )
-    db.session.add(blog)
-    db.session.commit()
+    blog, error_response = _commit_new_blog_with_slug_retry(data, user.id)
+    if error_response is not None:
+        return error_response
 
     return jsonify({"blog": _serialize_blog(blog)}), 201
 
@@ -324,22 +425,9 @@ def update_blog(slug: str):
             fields,
         )
 
-    if "title" in data:
-        title = data["title"]
-        if title != blog.title:
-            blog.title = title
-            blog.slug = _unique_slug(title, exclude_blog_id=blog.id)
-
-    if "excerpt" in data:
-        blog.excerpt = data["excerpt"]
-
-    if "content" in data:
-        blog.content = data["content"]
-
-    if "status" in data:
-        blog.status = data["status"]
-
-    db.session.commit()
+    blog, error_response = _commit_blog_update_with_slug_retry(blog, data)
+    if error_response is not None:
+        return error_response
 
     return jsonify({"blog": _serialize_blog(blog)}), 200
 
