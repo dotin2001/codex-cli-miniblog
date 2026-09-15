@@ -2,9 +2,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { CreateBlogCta } from "./create-blog-cta";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiRequestError, getBlogs } from "@/lib/api/blogs";
 import type { Blog, Pagination } from "@/lib/api/blogs";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 export const dynamic = "force-dynamic";
 
@@ -53,19 +55,20 @@ async function loadBlogs(): Promise<BlogListState> {
 
 function BlogShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
+    <main className={ui.pageGradient}>
       <div className="mx-auto max-w-6xl">
         <header className="flex items-center justify-between gap-4">
           <Link
             href={routes.blogs}
-            className="text-xl font-bold tracking-tight text-purpleInk"
+            className={ui.brand}
           >
             MiniBlog
           </Link>
-          <nav aria-label="Blog navigation" className="flex items-center gap-3">
+          <nav aria-label="Blog navigation" className="flex flex-wrap items-center justify-end gap-3">
+            <ThemeToggle />
             <CreateBlogCta />
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+              className={`${ui.secondaryButton} min-h-10 px-4`}
               href={routes.dashboard}
             >
               Account
@@ -89,17 +92,17 @@ function BlogList({
     <section className="py-12 sm:py-16">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+          <p className={ui.eyebrow}>
             Published posts
           </p>
-          <h1 className="mt-4 text-balance text-4xl font-bold tracking-normal text-slate-950 sm:text-5xl">
+          <h1 className={`mt-4 text-balance text-4xl sm:text-5xl ${ui.title}`}>
             Read the latest from MiniBlog.
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-8 text-slate-700 sm:text-lg">
+          <p className={`mt-5 max-w-xl text-base leading-8 sm:text-lg ${ui.text}`}>
             Browse public stories shared by MiniBlog authors.
           </p>
         </div>
-        <p className="text-sm font-semibold text-slate-600">
+        <p className={`text-sm font-semibold ${ui.muted}`}>
           {pagination.total} {pagination.total === 1 ? "post" : "posts"}
         </p>
       </div>
@@ -119,27 +122,27 @@ function BlogList({
 
 function BlogCard({ blog }: { blog: Blog }) {
   return (
-    <article className="flex h-full flex-col rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold text-slate-600">
+    <article className={`flex h-full flex-col p-6 ${ui.surface}`}>
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold ${ui.muted}`}>
         <span>{blog.author?.name ?? "Unknown author"}</span>
-        <span aria-hidden="true" className="text-purple-300">
+        <span aria-hidden="true" className="text-purple-300 dark:text-purple-500">
           /
         </span>
         <time dateTime={blog.createdAt}>{formatDate(blog.createdAt)}</time>
       </div>
-      <h2 className="mt-4 text-2xl font-bold tracking-normal text-slate-950">
+      <h2 className={`mt-4 text-2xl ${ui.title}`}>
         <Link
-          className="transition hover:text-purpleInk"
+          className="transition hover:text-purpleInk dark:hover:text-purple-200"
           href={routes.blog(blog.slug)}
         >
           {blog.title}
         </Link>
       </h2>
-      <p className="mt-4 line-clamp-3 flex-1 text-base leading-7 text-slate-700">
+      <p className={`mt-4 line-clamp-3 flex-1 text-base leading-7 ${ui.text}`}>
         {blog.excerpt ?? "No excerpt available."}
       </p>
       <Link
-        className="mt-6 inline-flex min-h-10 w-fit items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        className={`mt-6 min-h-10 w-fit px-4 ${ui.primaryButton}`}
         href={routes.blog(blog.slug)}
       >
         Read post
@@ -150,14 +153,14 @@ function BlogCard({ blog }: { blog: Blog }) {
 
 function EmptyState() {
   return (
-    <div className="mt-10 rounded-xl border border-purple-100 bg-white p-8 text-center shadow-2xl shadow-purple-950/10">
-      <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+    <div className={`mt-10 p-8 text-center ${ui.surface}`}>
+      <p className={ui.eyebrow}>
         No posts yet
       </p>
-      <h2 className="mt-3 text-2xl font-bold tracking-normal text-slate-950">
+      <h2 className={`mt-3 text-2xl ${ui.title}`}>
         Published blogs will appear here.
       </h2>
-      <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-slate-700">
+      <p className={`mx-auto mt-3 max-w-lg text-base leading-7 ${ui.text}`}>
         Check back after authors publish their first MiniBlog posts.
       </p>
     </div>
@@ -166,7 +169,7 @@ function EmptyState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-900 shadow-2xl shadow-red-950/5">
+    <div className={`p-6 ${ui.errorPanel}`}>
       <p className="text-sm font-semibold uppercase tracking-wide">
         Unable to load blogs
       </p>

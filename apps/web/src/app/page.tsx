@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -28,28 +30,29 @@ const highlights = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white text-slate-950">
-      <section className="bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 sm:px-8 lg:px-10">
+    <main className={ui.pageGradient}>
+      <section>
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col">
           <header className="flex items-center justify-between gap-4">
             <Link
               href={routes.blogs}
-              className="text-xl font-bold tracking-tight text-purpleInk"
+              className={ui.brand}
             >
               MiniBlog
             </Link>
             <nav
               aria-label="Primary navigation"
-              className="flex items-center gap-3"
+              className="flex flex-wrap items-center justify-end gap-3"
             >
+              <ThemeToggle />
               <Link
-                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+                className={`${ui.secondaryButton} min-h-10 px-4`}
                 href={routes.login}
               >
                 Login
               </Link>
               <Link
-                className="hidden min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 sm:inline-flex"
+                className={`${ui.primaryButton} hidden min-h-10 px-4 sm:inline-flex`}
                 href={routes.register}
               >
                 Register
@@ -59,25 +62,25 @@ export default function Home() {
 
           <div className="grid flex-1 items-center gap-12 py-12 lg:grid-cols-[1.04fr_0.96fr] lg:py-16">
             <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+              <p className={ui.eyebrow}>
                 MiniBlog
               </p>
-              <h1 className="mt-4 text-balance text-5xl font-bold tracking-normal text-slate-950 sm:text-6xl lg:text-7xl">
+              <h1 className={`mt-4 text-balance text-5xl sm:text-6xl lg:text-7xl ${ui.title}`}>
                 Share small stories with a polished MiniBlog.
               </h1>
-              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-700">
+              <p className={`mt-6 max-w-xl text-lg leading-8 ${ui.text}`}>
                 A clean starting point for posts, profiles, comments, and auth
                 flows that connect to the MiniBlog API.
               </p>
               <div className="mt-10 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  className="inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+                  className={`${ui.primaryButton} min-h-12 px-6`}
                   href={routes.login}
                 >
                   Login
                 </Link>
                 <Link
-                  className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+                  className={`${ui.secondaryButton} min-h-12 px-6`}
                   href={routes.register}
                 >
                   Register
@@ -85,7 +88,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-purple-100 bg-white p-5 shadow-2xl shadow-purple-950/10">
+            <div className={`${ui.surface} p-5`}>
               <div className="rounded-lg bg-slate-950 p-5 text-white">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div>

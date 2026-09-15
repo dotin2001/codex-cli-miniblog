@@ -14,6 +14,7 @@ import {
   useAccessToken,
 } from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 type OwnerActionState = "idle" | "checking" | "owner" | "not-owner";
 
@@ -104,18 +105,18 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
   }
 
   return (
-    <div className="mt-8 rounded-xl border border-purple-100 bg-white p-4 shadow-2xl shadow-purple-950/10 sm:p-5">
+    <div className={`mt-8 p-4 sm:p-5 ${ui.surface}`}>
       <div className="sm:flex sm:items-center sm:justify-between sm:gap-4">
-        <p className="text-sm font-semibold text-slate-700">Manage this post</p>
+        <p className={`text-sm font-semibold ${ui.text}`}>Manage this post</p>
         <div className="mt-4 flex flex-col gap-3 sm:mt-0 sm:flex-row sm:items-center">
           <Link
-            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+            className={`${ui.primaryButton} min-h-10 px-4`}
             href={routes.editBlog(blog.slug)}
           >
             Edit Blog
           </Link>
           <button
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70"
+            className={`${ui.destructiveButton} min-h-10 px-4`}
             disabled={isDeleting}
             onClick={handleDelete}
             type="button"
@@ -125,7 +126,7 @@ export function BlogOwnerActions({ blog }: { blog: Blog }) {
         </div>
       </div>
       {error ? (
-        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <p className={`mt-4 px-4 py-3 text-sm ${ui.errorBox}`}>
           {error}
         </p>
       ) : null}

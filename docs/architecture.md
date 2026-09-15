@@ -55,6 +55,11 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
+Frontend theme preference is browser-local. The UI supports light, dark, and
+system modes, stores the selected preference in `localStorage` under
+`miniblog.themePreference`, and applies the resolved theme by toggling the
+`dark` class on the document element before normal page interaction.
+
 ## Backend
 
 `apps/api` contains the Flask API.

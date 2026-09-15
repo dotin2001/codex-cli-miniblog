@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiRequestError, deleteBlog, getMyBlogs } from "@/lib/api/blogs";
 import type { Blog, Pagination } from "@/lib/api/blogs";
 import {
@@ -12,6 +13,7 @@ import {
   useAccessToken,
 } from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 type MyBlogsState =
   | {
@@ -128,12 +130,12 @@ export default function MyBlogsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
+    <main className={ui.pageGradient}>
       <div className="mx-auto max-w-6xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link
             href={routes.blogs}
-            className="text-xl font-bold tracking-tight text-purpleInk"
+            className={ui.brand}
           >
             MiniBlog
           </Link>
@@ -141,14 +143,15 @@ export default function MyBlogsPage() {
             aria-label="My blogs navigation"
             className="flex flex-wrap items-center gap-3"
           >
+            <ThemeToggle />
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+              className={`${ui.secondaryButton} min-h-10 px-4`}
               href={routes.dashboard}
             >
               Dashboard
             </Link>
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+              className={`${ui.primaryButton} min-h-10 px-4`}
               href={routes.createBlog}
             >
               Create New Blog
@@ -159,18 +162,18 @@ export default function MyBlogsPage() {
         <section className="py-12 sm:py-16">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+              <p className={ui.eyebrow}>
                 My blogs
               </p>
-              <h1 className="mt-4 text-balance text-4xl font-bold tracking-normal text-slate-950 sm:text-5xl">
+              <h1 className={`mt-4 text-balance text-4xl sm:text-5xl ${ui.title}`}>
                 Manage your MiniBlog posts.
               </h1>
-              <p className="mt-5 max-w-xl text-base leading-8 text-slate-700 sm:text-lg">
+              <p className={`mt-5 max-w-xl text-base leading-8 sm:text-lg ${ui.text}`}>
                 Drafts and published posts from your account appear here.
               </p>
             </div>
             {state.status === "ready" ? (
-              <p className="text-sm font-semibold text-slate-600">
+              <p className={`text-sm font-semibold ${ui.muted}`}>
                 {state.pagination.total}{" "}
                 {state.pagination.total === 1 ? "post" : "posts"}
               </p>
@@ -219,7 +222,7 @@ function BlogList({
   return (
     <div className="space-y-5">
       {deleteError ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <p className={`px-4 py-3 text-sm ${ui.errorBox}`}>
           {deleteError}
         </p>
       ) : null}
@@ -249,29 +252,29 @@ function BlogCard({
   const isPublished = blog.status === "published";
 
   return (
-    <article className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10">
+    <article className={`p-6 ${ui.surface}`}>
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={blog.status} />
             <time
-              className="text-sm font-semibold text-slate-600"
+              className={`text-sm font-semibold ${ui.muted}`}
               dateTime={blog.createdAt}
             >
               {formatDate(blog.createdAt)}
             </time>
           </div>
-          <h2 className="mt-4 text-2xl font-bold tracking-normal text-slate-950">
+          <h2 className={`mt-4 text-2xl ${ui.title}`}>
             {blog.title}
           </h2>
-          <p className="mt-4 line-clamp-3 text-base leading-7 text-slate-700">
+          <p className={`mt-4 line-clamp-3 text-base leading-7 ${ui.text}`}>
             {blog.excerpt ?? "No excerpt available."}
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
           {isPublished ? (
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+              className={`${ui.primaryButton} min-h-10 px-4`}
               href={routes.blog(blog.slug)}
             >
               View
@@ -280,15 +283,15 @@ function BlogCard({
           <Link
             className={
               isPublished
-                ? "inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
-                : "inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+                ? `${ui.secondaryButton} min-h-10 px-4`
+                : `${ui.primaryButton} min-h-10 px-4`
             }
             href={routes.editBlog(blog.slug)}
           >
             Edit
           </Link>
           <button
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70"
+            className={`${ui.destructiveButton} min-h-10 px-4`}
             disabled={isDeleting}
             onClick={() => onDelete(blog)}
             type="button"
@@ -307,9 +310,7 @@ function StatusBadge({ status }: { status: Blog["status"] }) {
   return (
     <span
       className={
-        isPublished
-          ? "inline-flex min-h-7 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold uppercase tracking-wide text-emerald-800"
-          : "inline-flex min-h-7 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold uppercase tracking-wide text-amber-800"
+        isPublished ? ui.successBadge : ui.warningBadge
       }
     >
       {isPublished ? "Published" : "Draft"}
@@ -322,13 +323,13 @@ function LoadingState() {
     <div className="grid gap-5">
       {[0, 1, 2].map((item) => (
         <div
-          className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10"
+          className={`p-6 ${ui.surface}`}
           key={item}
         >
-          <div className="h-7 w-24 rounded-full bg-purple-100" />
-          <div className="mt-5 h-7 w-2/3 rounded-lg bg-slate-100" />
-          <div className="mt-4 h-4 w-full rounded-lg bg-slate-100" />
-          <div className="mt-3 h-4 w-4/5 rounded-lg bg-slate-100" />
+          <div className={`h-7 w-24 rounded-full ${ui.skeletonPurple}`} />
+          <div className={`mt-5 h-7 w-2/3 rounded-lg ${ui.skeletonNeutral}`} />
+          <div className={`mt-4 h-4 w-full rounded-lg ${ui.skeletonNeutral}`} />
+          <div className={`mt-3 h-4 w-4/5 rounded-lg ${ui.skeletonNeutral}`} />
         </div>
       ))}
     </div>
@@ -337,18 +338,18 @@ function LoadingState() {
 
 function EmptyState() {
   return (
-    <div className="rounded-xl border border-purple-100 bg-white p-8 text-center shadow-2xl shadow-purple-950/10">
-      <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+    <div className={`p-8 text-center ${ui.surface}`}>
+      <p className={ui.eyebrow}>
         No blogs yet
       </p>
-      <h2 className="mt-3 text-2xl font-bold tracking-normal text-slate-950">
+      <h2 className={`mt-3 text-2xl ${ui.title}`}>
         Start with your first post.
       </h2>
-      <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-slate-700">
+      <p className={`mx-auto mt-3 max-w-lg text-base leading-7 ${ui.text}`}>
         Drafts and published posts will appear here after you create them.
       </p>
       <Link
-        className="mt-6 inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        className={`mt-6 min-h-12 px-6 ${ui.primaryButton}`}
         href={routes.createBlog}
       >
         Create New Blog
@@ -359,12 +360,12 @@ function EmptyState() {
 
 function UnauthenticatedState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8">
-      <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <div className={`p-6 sm:p-8 ${ui.surface}`}>
+      <p className={`px-4 py-3 text-sm ${ui.errorBox}`}>
         {message}
       </p>
       <Link
-        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        className={`mt-6 min-h-12 w-full px-6 ${ui.primaryButton}`}
         href={routes.login}
       >
         Go to login
@@ -375,7 +376,7 @@ function UnauthenticatedState({ message }: { message: string }) {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-900 shadow-2xl shadow-red-950/5">
+    <div className={`p-6 ${ui.errorPanel}`}>
       <p className="text-sm font-semibold uppercase tracking-wide">
         Unable to load blogs
       </p>

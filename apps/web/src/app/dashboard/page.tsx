@@ -1,25 +1,28 @@
 import Link from "next/link";
 
 import { DashboardPanel } from "@/components/auth-panel";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-white px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
+    <main className={ui.pagePlain}>
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between gap-4">
           <Link
             href={routes.blogs}
-            className="text-xl font-bold tracking-tight text-purpleInk"
+            className={ui.brand}
           >
             MiniBlog
           </Link>
           <nav
             aria-label="Dashboard navigation"
-            className="flex items-center gap-3"
+            className="flex flex-wrap items-center justify-end gap-3"
           >
+            <ThemeToggle />
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+              className={`${ui.secondaryButton} min-h-10 px-4`}
               href={routes.login}
             >
               Login
@@ -29,24 +32,24 @@ export default function DashboardPage() {
 
         <section className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[0.9fr_1.1fr] lg:py-16">
           <div className="max-w-xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+            <p className={ui.eyebrow}>
               Account
             </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-normal text-slate-950 sm:text-5xl">
+            <h1 className={`mt-4 text-4xl sm:text-5xl ${ui.title}`}>
               Your MiniBlog dashboard.
             </h1>
-            <p className="mt-5 text-lg leading-8 text-slate-600">
+            <p className={`mt-5 text-lg leading-8 ${ui.muted}`}>
               Review the authenticated user returned by the MiniBlog API.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                className="inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+                className={`${ui.primaryButton} min-h-12 px-6`}
                 href={routes.createBlog}
               >
                 Create New Blog
               </Link>
               <Link
-                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+                className={`${ui.secondaryButton} min-h-12 px-6`}
                 href={routes.myBlogs}
               >
                 My Blogs

@@ -19,6 +19,7 @@ import {
   setStoredAccessToken
 } from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 type AuthFormError = {
   fields?: Record<string, string>;
@@ -79,9 +80,9 @@ export function LoginPanel() {
           Log in
         </SubmitButton>
       </form>
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className={`mt-6 text-center text-sm ${ui.muted}`}>
         Need an account?{" "}
-        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href={routes.register}>
+        <Link className="font-semibold text-purpleInk hover:text-purpleGlow dark:text-purple-200 dark:hover:text-purple-100" href={routes.register}>
           Register
         </Link>
       </p>
@@ -144,7 +145,7 @@ export function RegisterPanel() {
           type="password"
         />
         {registeredUser ? (
-          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <p className={`px-4 py-3 text-sm ${ui.successBox}`}>
             {registeredUser.name} is registered. You can log in now.
           </p>
         ) : null}
@@ -153,9 +154,9 @@ export function RegisterPanel() {
           Create account
         </SubmitButton>
       </form>
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className={`mt-6 text-center text-sm ${ui.muted}`}>
         Already registered?{" "}
-        <Link className="font-semibold text-purpleInk hover:text-purpleGlow" href={routes.login}>
+        <Link className="font-semibold text-purpleInk hover:text-purpleGlow dark:text-purple-200 dark:hover:text-purple-100" href={routes.login}>
           Log in
         </Link>
       </p>
@@ -225,9 +226,9 @@ export function DashboardPanel() {
     return (
       <AuthCard eyebrow="Dashboard" title="Loading your account">
         <div className="space-y-4">
-          <div className="h-4 w-36 rounded-full bg-purple-100" />
-          <div className="h-20 rounded-lg bg-slate-100" />
-          <div className="h-12 rounded-lg bg-purple-100" />
+          <div className={`h-4 w-36 rounded-full ${ui.skeletonPurple}`} />
+          <div className={`h-20 rounded-lg ${ui.skeletonNeutral}`} />
+          <div className={`h-12 rounded-lg ${ui.skeletonPurple}`} />
         </div>
       </AuthCard>
     );
@@ -238,7 +239,7 @@ export function DashboardPanel() {
       <AuthCard eyebrow="Dashboard" title="Sign in required">
         {state.error ? <AuthError error={state.error} /> : null}
         <Link
-          className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+          className={`mt-6 min-h-12 w-full px-6 ${ui.primaryButton}`}
           href={routes.login}
         >
           Go to login
@@ -249,31 +250,31 @@ export function DashboardPanel() {
 
   return (
     <AuthCard eyebrow="Dashboard" title={`Hello, ${state.user.name}`}>
-      <dl className="grid gap-4 rounded-xl border border-purple-100 bg-purple-50/70 p-4">
+      <dl className="grid gap-4 rounded-xl border border-purple-100 bg-purple-50/70 p-4 transition-colors dark:border-purple-300/20 dark:bg-purple-950/30">
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Name
           </dt>
-          <dd className="mt-1 text-base font-semibold text-slate-950">{state.user.name}</dd>
+          <dd className="mt-1 text-base font-semibold text-slate-950 dark:text-white">{state.user.name}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Email
           </dt>
-          <dd className="mt-1 break-all text-base font-semibold text-slate-950">
+          <dd className="mt-1 break-all text-base font-semibold text-slate-950 dark:text-white">
             {state.user.email}
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             User ID
           </dt>
-          <dd className="mt-1 text-base font-semibold text-slate-950">{state.user.id}</dd>
+          <dd className="mt-1 text-base font-semibold text-slate-950 dark:text-white">{state.user.id}</dd>
         </div>
       </dl>
       {state.error ? <div className="mt-5"><AuthError error={state.error} /></div> : null}
       <button
-        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-70"
+        className={`mt-6 min-h-12 w-full px-6 ${ui.secondaryButton}`}
         disabled={isSigningOut}
         onClick={handleLogout}
         type="button"
@@ -294,10 +295,10 @@ function AuthCard({
   title: string;
 }) {
   return (
-    <section className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8">
-      <div className="mb-6 border-b border-slate-100 pb-5">
-        <p className="text-sm font-semibold text-purpleInk">{eyebrow}</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-normal text-slate-950">{title}</h1>
+    <section className={`p-6 sm:p-8 ${ui.surface}`}>
+      <div className={`mb-6 border-b pb-5 ${ui.divider}`}>
+        <p className="text-sm font-semibold text-purpleInk dark:text-purple-200">{eyebrow}</p>
+        <h1 className={`mt-2 text-3xl ${ui.title}`}>{title}</h1>
       </div>
       {children}
     </section>
@@ -319,15 +320,15 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
+      <span className={ui.label}>{label}</span>
       <input
         autoComplete={autoComplete}
-        className="mt-2 min-h-12 w-full rounded-lg border border-purple-100 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+        className={`mt-2 min-h-12 w-full px-4 ${ui.input}`}
         name={name}
         required
         type={type}
       />
-      {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
+      {error ? <span className={ui.fieldError}>{error}</span> : null}
     </label>
   );
 }
@@ -343,7 +344,7 @@ function SubmitButton({
 }) {
   return (
     <button
-      className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
+      className={`min-h-12 w-full px-6 ${ui.primaryButton}`}
       disabled={isSubmitting}
       type="submit"
     >
@@ -354,7 +355,7 @@ function SubmitButton({
 
 function AuthError({ error }: { error: AuthFormError }) {
   return (
-    <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <p className={`px-4 py-3 text-sm ${ui.errorBox}`}>
       {error.message}
     </p>
   );

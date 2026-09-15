@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiRequestError, createBlog } from "@/lib/api/blogs";
 import type { BlogStatus, CreateBlogPayload } from "@/lib/api/blogs";
 import {
@@ -13,6 +14,7 @@ import {
   runWithFreshAccessToken,
 } from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 type FormError = {
   fields?: Record<string, string>;
@@ -60,21 +62,22 @@ export default function NewBlogPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
+    <main className={ui.pageGradient}>
       <div className="mx-auto max-w-4xl">
         <header className="flex items-center justify-between gap-4">
           <Link
             href={routes.blogs}
-            className="text-xl font-bold tracking-tight text-purpleInk"
+            className={ui.brand}
           >
             MiniBlog
           </Link>
           <nav
             aria-label="Create blog navigation"
-            className="flex items-center gap-3"
+            className="flex flex-wrap items-center justify-end gap-3"
           >
+            <ThemeToggle />
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+              className={`${ui.secondaryButton} min-h-10 px-4`}
               href={routes.dashboard}
             >
               Dashboard
@@ -84,13 +87,13 @@ export default function NewBlogPage() {
 
         <section className="py-12 sm:py-16">
           <div className="mb-8 max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+            <p className={ui.eyebrow}>
               New post
             </p>
-            <h1 className="mt-4 text-balance text-4xl font-bold tracking-normal text-slate-950 sm:text-5xl">
+            <h1 className={`mt-4 text-balance text-4xl sm:text-5xl ${ui.title}`}>
               Create a MiniBlog post.
             </h1>
-            <p className="mt-5 text-base leading-8 text-slate-700 sm:text-lg">
+            <p className={`mt-5 text-base leading-8 sm:text-lg ${ui.text}`}>
               Draft or publish a post with the authenticated MiniBlog API.
             </p>
           </div>
@@ -123,7 +126,7 @@ function BlogForm({
 }) {
   return (
     <form
-      className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8"
+      className={`p-6 sm:p-8 ${ui.surface}`}
       onSubmit={onSubmit}
     >
       <div className="grid gap-5">
@@ -154,13 +157,13 @@ function BlogForm({
         {error ? <FormErrorMessage error={error} /> : null}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link
-            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+            className={`${ui.secondaryButton} min-h-12 px-6`}
             href={routes.dashboard}
           >
             Cancel
           </Link>
           <button
-            className="inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
+            className={`${ui.primaryButton} min-h-12 px-6`}
             disabled={isSubmitting}
             type="submit"
           >
@@ -174,10 +177,10 @@ function BlogForm({
 
 function UnauthenticatedState({ error }: { error: FormError }) {
   return (
-    <div className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8">
+    <div className={`p-6 sm:p-8 ${ui.surface}`}>
       <FormErrorMessage error={error} />
       <Link
-        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        className={`mt-6 min-h-12 w-full px-6 ${ui.primaryButton}`}
         href={routes.login}
       >
         Go to login
@@ -203,16 +206,16 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
+      <span className={ui.label}>{label}</span>
       <input
         autoComplete={autoComplete}
-        className="mt-2 min-h-12 w-full rounded-lg border border-purple-100 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+        className={`mt-2 min-h-12 w-full px-4 ${ui.input}`}
         name={name}
         placeholder={placeholder}
         required={required}
         type="text"
       />
-      {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
+      {error ? <span className={ui.fieldError}>{error}</span> : null}
     </label>
   );
 }
@@ -234,15 +237,15 @@ function TextAreaField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
+      <span className={ui.label}>{label}</span>
       <textarea
-        className="mt-2 w-full resize-y rounded-lg border border-purple-100 bg-white px-4 py-3 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+        className={`mt-2 w-full resize-y px-4 py-3 leading-6 ${ui.input}`}
         name={name}
         placeholder={placeholder}
         required={required}
         rows={rows}
       />
-      {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
+      {error ? <span className={ui.fieldError}>{error}</span> : null}
     </label>
   );
 }
@@ -250,23 +253,23 @@ function TextAreaField({
 function StatusField({ error }: { error?: string }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-800">Status</span>
+      <span className={ui.label}>Status</span>
       <select
-        className="mt-2 min-h-12 w-full rounded-lg border border-purple-100 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+        className={`mt-2 min-h-12 w-full px-4 ${ui.input}`}
         defaultValue="draft"
         name="status"
       >
         <option value="draft">Draft</option>
         <option value="published">Published</option>
       </select>
-      {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
+      {error ? <span className={ui.fieldError}>{error}</span> : null}
     </label>
   );
 }
 
 function FormErrorMessage({ error }: { error: FormError }) {
   return (
-    <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <p className={`px-4 py-3 text-sm ${ui.errorBox}`}>
       {error.message}
     </p>
   );
