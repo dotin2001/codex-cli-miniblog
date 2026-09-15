@@ -40,6 +40,10 @@ Frontend API helpers live in:
 - `apps/web/src/lib/api/comments.ts`
 - `apps/web/src/lib/api/client.ts`
 
+For a workflow-level trace from frontend routes and helpers to backend endpoints,
+auth mode, database tables, indexes, and verification ownership, see
+`docs/fullstack-data-flow.md`.
+
 Frontend route paths are centralized in:
 
 - `apps/web/src/lib/routes.ts`
