@@ -48,6 +48,7 @@ export type BlogListParams = {
   page?: number;
   perPage?: number;
   tag?: string;
+  title?: string;
 };
 
 export type BlogListResponse = {
@@ -157,6 +158,10 @@ function withQuery(path: string, params: BlogListParams): string {
 
   if (params.tag) {
     query.set("tag", params.tag);
+  }
+
+  if (params.title?.trim()) {
+    query.set("title", params.title.trim());
   }
 
   const queryString = query.toString();

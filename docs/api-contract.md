@@ -469,6 +469,10 @@ Query parameters:
 - `perPage` is optional and defaults to `10`.
 - `perPage` is capped at `50`.
 - `tag` is optional. When provided, it is interpreted as a tag slug and only published blogs associated with that tag are returned.
+- `title` is optional. When provided, it is trimmed and matched case-insensitively against published blog titles as a partial text search. Blank values are ignored.
+
+When `tag` and `title` are both provided, both filters apply. Pagination totals
+reflect the fully filtered published blog result set.
 
 Success response:
 
@@ -523,6 +527,18 @@ Tag-filtered example:
 
 ```bash
 curl "http://127.0.0.1:8080/blogs?tag=python&page=1&perPage=10"
+```
+
+Title-search example:
+
+```bash
+curl "http://127.0.0.1:8080/blogs?title=flask&page=1&perPage=10"
+```
+
+Combined tag and title example:
+
+```bash
+curl "http://127.0.0.1:8080/blogs?tag=python&title=testing&page=1&perPage=10"
 ```
 
 ### GET /blogs/:slug
@@ -1533,6 +1549,7 @@ Current status:
 
 - `GET /blogs` is implemented and returns published blogs with pagination.
 - `GET /blogs?tag=<tag-slug>` is implemented and returns published blogs associated with the tag.
+- `GET /blogs?title=<query>` is implemented and returns published blogs with titles that case-insensitively contain the trimmed query.
 - `GET /blogs/:slug` is implemented and returns one published blog by slug.
 - `GET /blogs/:slug/mine` is implemented and only allows the blog author to fetch their own draft or published blog.
 - `GET /me/blogs` is implemented and returns the current authenticated user's draft and published blogs with pagination.

@@ -425,6 +425,152 @@ class ReadBlogEndpointTestCase(unittest.TestCase):
             },
         )
 
+    def test_public_list_filters_published_blogs_by_partial_title(self):
+        now = datetime.now(timezone.utc)
+        with self.app.app_context():
+            self._add_blog(
+                title="Flask Testing Guide",
+                slug="flask-testing-guide",
+                created_at=now - timedelta(minutes=2),
+            )
+            self._add_blog(
+                title="Advanced FLASK Patterns",
+                slug="advanced-flask-patterns",
+                created_at=now,
+            )
+            self._add_blog(
+                title="Python Notes",
+                slug="python-notes",
+            )
+            self._add_blog(
+                title="Flask Draft Notes",
+                slug="flask-draft-notes",
+                status=Blog.STATUS_DRAFT,
+            )
+
+        response = self.client.get("/blogs?title=fLaSk")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["advanced-flask-patterns", "flask-testing-guide"],
+        )
+        self.assertEqual(
+            response.get_json()["pagination"],
+            {
+                "page": 1,
+                "perPage": 10,
+                "total": 2,
+                "totalPages": 1,
+            },
+        )
+
+    def test_public_list_ignores_blank_title_filter(self):
+        now = datetime.now(timezone.utc)
+        with self.app.app_context():
+            self._add_blog(
+                title="Old Published",
+                slug="old-published",
+                created_at=now - timedelta(days=1),
+            )
+            self._add_blog(
+                title="New Published",
+                slug="new-published",
+                created_at=now,
+            )
+
+        response = self.client.get("/blogs?title=%20%20")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["new-published", "old-published"],
+        )
+        self.assertEqual(response.get_json()["pagination"]["total"], 2)
+
+    def test_public_list_treats_title_wildcards_as_literal_text(self):
+        with self.app.app_context():
+            self._add_blog(title="100% Flask", slug="literal-percent-flask")
+            self._add_blog(title="100x Flask", slug="plain-flask")
+
+        response = self.client.get("/blogs?title=100%25")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["literal-percent-flask"],
+        )
+
+    def test_public_list_combines_title_and_tag_filters(self):
+        with self.app.app_context():
+            python = self._add_tag("Python", "python")
+            flask = self._add_tag("Flask", "flask")
+            self._add_blog(
+                title="Testing Python APIs",
+                slug="testing-python-apis",
+                tags=[python],
+            )
+            self._add_blog(
+                title="Testing Flask Apps",
+                slug="testing-flask-apps",
+                tags=[flask],
+            )
+            self._add_blog(
+                title="Python Patterns",
+                slug="python-patterns",
+                tags=[python],
+            )
+
+        response = self.client.get("/blogs?tag=python&title=testing")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["testing-python-apis"],
+        )
+        self.assertEqual(response.get_json()["pagination"]["total"], 1)
+
+    def test_public_list_paginates_filtered_title_results(self):
+        now = datetime.now(timezone.utc)
+        with self.app.app_context():
+            self._add_blog(
+                title="Guide One",
+                slug="guide-one",
+                created_at=now - timedelta(minutes=3),
+            )
+            self._add_blog(
+                title="Guide Two",
+                slug="guide-two",
+                created_at=now - timedelta(minutes=2),
+            )
+            self._add_blog(
+                title="Guide Three",
+                slug="guide-three",
+                created_at=now - timedelta(minutes=1),
+            )
+            self._add_blog(
+                title="Other Post",
+                slug="other-post",
+                created_at=now,
+            )
+
+        response = self.client.get("/blogs?title=guide&page=2&perPage=2")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [blog["slug"] for blog in response.get_json()["blogs"]],
+            ["guide-one"],
+        )
+        self.assertEqual(
+            response.get_json()["pagination"],
+            {
+                "page": 2,
+                "perPage": 2,
+                "total": 3,
+                "totalPages": 2,
+            },
+        )
+
     def test_my_blogs_excludes_other_users_blogs(self):
         with self.app.app_context():
             self._add_blog(title="Owned Blog", slug="owned-blog")

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { BlogTitleSearchForm } from "./blog-title-search-form";
 import { CreateBlogCta } from "./create-blog-cta";
 import { BlogTagList } from "@/components/blog-tag-list";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -31,18 +32,22 @@ type BlogListState =
 type BlogsPageProps = {
   searchParams?: Promise<{
     tag?: string | string[];
+    title?: string | string[];
   }>;
 };
 
 export default async function BlogsPage({ searchParams }: BlogsPageProps) {
-  const activeTag = getActiveTag(await searchParams);
-  const state = await loadBlogs(activeTag);
+  const resolvedSearchParams = await searchParams;
+  const activeTag = getActiveTag(resolvedSearchParams);
+  const activeTitle = getActiveTitle(resolvedSearchParams);
+  const state = await loadBlogs(activeTag, activeTitle);
 
   return (
     <BlogShell>
       {state.status === "success" ? (
         <BlogList
           activeTag={activeTag}
+          activeTitle={activeTitle}
           blogs={state.blogs}
           pagination={state.pagination}
         />
@@ -55,12 +60,16 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
   );
 }
 
-async function loadBlogs(activeTag: string | null): Promise<BlogListState> {
+async function loadBlogs(
+  activeTag: string | null,
+  activeTitle: string | null,
+): Promise<BlogListState> {
   try {
     const { blogs, pagination } = await getBlogs({
       page: 1,
       perPage: 10,
       ...(activeTag ? { tag: activeTag } : {}),
+      ...(activeTitle ? { title: activeTitle } : {}),
     });
 
     return { blogs, pagination, status: "success" };
@@ -99,10 +108,12 @@ function BlogShell({ children }: { children: React.ReactNode }) {
 
 function BlogList({
   activeTag,
+  activeTitle,
   blogs,
   pagination,
 }: {
   activeTag: string | null;
+  activeTitle: string | null;
   blogs: Blog[];
   pagination: Pagination;
 }) {
@@ -114,18 +125,18 @@ function BlogList({
             Published posts
           </p>
           <h1 className={`mt-4 text-balance text-4xl sm:text-5xl ${ui.title}`}>
-            {activeTag ? `Read posts tagged #${activeTag}.` : "Read the latest from MiniBlog."}
+            {getListHeading(activeTag, activeTitle)}
           </h1>
           <p className={`mt-5 max-w-xl text-base leading-8 sm:text-lg ${ui.text}`}>
-            {activeTag
-              ? "Browse published stories that share this MiniBlog tag."
-              : "Browse public stories shared by MiniBlog authors."}
+            {getListDescription(activeTag, activeTitle)}
           </p>
         </div>
         <p className={`text-sm font-semibold ${ui.muted}`}>
           {pagination.total} {pagination.total === 1 ? "post" : "posts"}
         </p>
       </div>
+
+      <BlogTitleSearchForm activeTag={activeTag} activeTitle={activeTitle} />
 
       {blogs.length > 0 ? (
         <div className="mt-10 grid gap-5 md:grid-cols-2">
@@ -134,7 +145,7 @@ function BlogList({
           ))}
         </div>
       ) : (
-        <EmptyState />
+        <EmptyState activeTag={activeTag} activeTitle={activeTitle} />
       )}
     </section>
   );
@@ -172,17 +183,29 @@ function BlogCard({ blog }: { blog: Blog }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  activeTag,
+  activeTitle,
+}: {
+  activeTag: string | null;
+  activeTitle: string | null;
+}) {
+  const hasFilters = Boolean(activeTag || activeTitle);
+
   return (
     <div className={`mt-10 p-8 text-center ${ui.surface}`}>
       <p className={ui.eyebrow}>
-        No posts yet
+        {hasFilters ? "No matches" : "No posts yet"}
       </p>
       <h2 className={`mt-3 text-2xl ${ui.title}`}>
-        Published blogs will appear here.
+        {activeTitle
+          ? `No published posts matched "${activeTitle}".`
+          : "Published blogs will appear here."}
       </h2>
       <p className={`mx-auto mt-3 max-w-lg text-base leading-7 ${ui.text}`}>
-        Check back after authors publish their first MiniBlog posts.
+        {hasFilters
+          ? "Try another title search or clear the active filters."
+          : "Check back after authors publish their first MiniBlog posts."}
       </p>
     </div>
   );
@@ -219,6 +242,55 @@ function getActiveTag(
   const tag = rawTag?.trim();
 
   return tag ? tag : null;
+}
+
+function getActiveTitle(
+  searchParams: { title?: string | string[] } | undefined,
+): string | null {
+  const rawTitle = Array.isArray(searchParams?.title)
+    ? searchParams?.title[0]
+    : searchParams?.title;
+  const title = rawTitle?.trim();
+
+  return title ? title : null;
+}
+
+function getListHeading(
+  activeTag: string | null,
+  activeTitle: string | null,
+): string {
+  if (activeTag && activeTitle) {
+    return `Search results for "${activeTitle}" tagged #${activeTag}.`;
+  }
+
+  if (activeTitle) {
+    return `Search results for "${activeTitle}".`;
+  }
+
+  if (activeTag) {
+    return `Read posts tagged #${activeTag}.`;
+  }
+
+  return "Read the latest from MiniBlog.";
+}
+
+function getListDescription(
+  activeTag: string | null,
+  activeTitle: string | null,
+): string {
+  if (activeTag && activeTitle) {
+    return "Browse published stories matching this title search and tag.";
+  }
+
+  if (activeTitle) {
+    return "Browse published stories with titles matching your search.";
+  }
+
+  if (activeTag) {
+    return "Browse published stories that share this MiniBlog tag.";
+  }
+
+  return "Browse public stories shared by MiniBlog authors.";
 }
 
 function formatDate(value: string): string {

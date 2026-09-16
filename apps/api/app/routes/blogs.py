@@ -418,6 +418,16 @@ def _pagination_value(name: str, default: int, maximum: int | None = None) -> in
     return value
 
 
+def _like_contains_pattern(value: str) -> str:
+    escaped = (
+        value.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+
+    return f"%{escaped}%"
+
+
 def _serialize_author(user: User) -> dict[str, Any]:
     return {
         "id": user.id,
@@ -643,6 +653,7 @@ def list_blogs():
     page = _pagination_value("page", DEFAULT_PAGE)
     per_page = _pagination_value("perPage", DEFAULT_PER_PAGE, MAX_PER_PAGE)
     tag_slug = (request.args.get("tag") or "").strip().lower()
+    title_query = (request.args.get("title") or "").strip()
     query = (
         Blog.query.options(joinedload(Blog.author), selectinload(Blog.tags))
         .filter_by(status=Blog.STATUS_PUBLISHED)
@@ -650,6 +661,10 @@ def list_blogs():
     )
     if tag_slug:
         query = query.join(Blog.tags).filter(Tag.slug == tag_slug)
+    if title_query:
+        query = query.filter(
+            Blog.title.ilike(_like_contains_pattern(title_query), escape="\\")
+        )
 
     total = query.count()
     blogs = query.offset((page - 1) * per_page).limit(per_page).all()
