@@ -250,7 +250,7 @@ set +a
 flask --app app db upgrade
 ```
 
-Apply existing migrations from the API container after MySQL is running, from the project root:
+The API container applies pending migrations before Gunicorn starts. For one-off local migration checks in the API container, run from the project root:
 
 ```bash
 docker compose run --rm api flask --app app db upgrade
