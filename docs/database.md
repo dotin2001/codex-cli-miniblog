@@ -198,6 +198,41 @@ The backend uses SQLAlchemy with PyMySQL, so it normalizes only the database URL
 
 Railway API deployments use the repository root `Dockerfile`, which packages `apps/api` and starts with `sh ./start-api.sh`. The startup script runs `flask --app app db upgrade` with retries before starting Gunicorn, so Railway deploys apply pending migrations before serving requests. If Railway has a custom Start Command, set it to `sh ./start-api.sh`; starting Gunicorn directly bypasses migrations and can leave new tables such as `blog_tags` missing.
 
+### Diagnosing Missing `blog_tags` On Railway
+
+If Railway logs show an error such as:
+
+```text
+pymysql.err.ProgrammingError: (1146, "Table 'railway.blog_tags' doesn't exist")
+```
+
+while handling `GET /blogs`, the deployed API code is newer than the connected
+database schema. Blog list queries eager-load `Blog.tags` through the
+`blog_tags` association table, so a missing table means the pending migrations
+that create or repair `tags` and `blog_tags` have not been applied to that
+database before traffic reached Gunicorn.
+
+Check the Railway service configuration first:
+
+- Confirm the service uses the repository root `Dockerfile`.
+- Confirm the Railway Start Command is `sh ./start-api.sh`, or remove any
+  custom command that starts Gunicorn directly.
+- Redeploy the current image after fixing the start command.
+- Confirm deployment logs show migration startup before Gunicorn, including:
+
+```text
+Running database migrations before API start, attempt 1/12...
+Database migrations are up to date.
+```
+
+If the table is still missing, run `flask --app app db upgrade` against the same
+Railway MySQL database used by the API service, or use a Railway one-off command
+that invokes the same migration command in the deployed environment. Do not use
+`db.create_all()` as a production repair path; it bypasses Alembic migration
+history and can create schema drift that later migrations cannot reason about.
+Do not paste resolved Railway database URLs, passwords, or tokens into committed
+files or shared logs.
+
 The Compose API service also sets `MINIBLOG_ENV=production`; keep a strong non-placeholder `JWT_SECRET_KEY` in `.env` before starting that container.
 
 ## Backend Setup
