@@ -108,7 +108,7 @@ The Compose API service sets that container `DATABASE_URL` explicitly, so a host
 
 For Railway deployments, set `DATABASE_URL=${{mysql.MYSQL_URL}}` in the Railway Variables UI only. Do not copy that expression or resolved Railway secrets into local `.env` files. Railway may resolve the value to a `mysql://` URL; the backend automatically normalizes that scheme to `mysql+pymysql://` for SQLAlchemy and leaves existing `mysql+pymysql://` URLs unchanged.
 
-The backend startup command is `sh ./start-api.sh`. It applies pending migrations with retries before starting Gunicorn. If Railway has a custom Start Command, set it to `sh ./start-api.sh`; a direct `gunicorn ...` command will bypass migrations and can leave `/blogs` failing when new tables are added.
+Railway API deployments use the root `Dockerfile`, which packages `apps/api` and starts with `sh ./start-api.sh`. The startup script applies pending migrations with retries before starting Gunicorn. If Railway has a custom Start Command, set it to `sh ./start-api.sh`; a direct `gunicorn ...` command will bypass migrations and can leave `/blogs` failing when new tables are added.
 
 For HTTPS deployments, set `REFRESH_TOKEN_COOKIE_SECURE=true` and set `CORS_ORIGINS` to the allowed frontend origins as a comma-separated list.
 
@@ -141,7 +141,7 @@ docker compose build api
 docker compose up api
 ```
 
-The API container runs `sh ./start-api.sh`, which applies pending Flask-Migrate migrations with retries, then runs the Flask app with Gunicorn.
+The local Compose API container and Railway API image both run `sh ./start-api.sh`, which applies pending Flask-Migrate migrations with retries, then runs the Flask app with Gunicorn.
 
 Health check:
 
