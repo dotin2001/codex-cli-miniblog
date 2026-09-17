@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiRequestError as AuthApiRequestError, getMe } from "@/lib/api/auth";
 import type { AuthUser } from "@/lib/api/auth";
 import {
@@ -14,7 +15,14 @@ import {
   updateBlog,
 } from "@/lib/api/blogs";
 import type { Blog, BlogStatus, UpdateBlogPayload } from "@/lib/api/blogs";
+import {
+  clearStoredAccessToken,
+  isUnauthorizedApiError,
+  runWithFreshAccessToken,
+  useAccessToken,
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 type FormError = {
   fields?: Record<string, string>;
@@ -70,8 +78,6 @@ type CurrentUserState =
       message: string;
     };
 
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
-
 export function EditBlogClient({ slug }: { slug: string }) {
   const router = useRouter();
   const accessToken = useAccessToken();
@@ -87,19 +93,21 @@ export function EditBlogClient({ slug }: { slug: string }) {
   const [formError, setFormError] = useState<FormError | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const activeAccessToken = removedToken ? null : accessToken;
+  const canTrySession = !removedToken;
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadBlog() {
-      if (!activeAccessToken) {
+      if (removedToken) {
         setBlogState({ blog: null, status: "loading" });
         return;
       }
 
       try {
-        const { blog } = await getMyBlog(slug, activeAccessToken);
+        const { blog } = await runWithFreshAccessToken((accessToken) =>
+          getMyBlog(slug, accessToken)
+        );
 
         if (isMounted) {
           setBlogState({ blog, status: "ready" });
@@ -131,13 +139,13 @@ export function EditBlogClient({ slug }: { slug: string }) {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken, slug]);
+  }, [accessToken, removedToken, slug]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadCurrentUser() {
-      if (!activeAccessToken) {
+      if (removedToken) {
         setCurrentUserState({
           message: "Log in to edit this blog post.",
           status: "unauthenticated",
@@ -149,14 +157,16 @@ export function EditBlogClient({ slug }: { slug: string }) {
       setCurrentUserState({ status: "loading", user: null });
 
       try {
-        const { user } = await getMe(activeAccessToken);
+        const { user } = await runWithFreshAccessToken((accessToken) =>
+          getMe(accessToken)
+        );
 
         if (isMounted) {
           setCurrentUserState({ status: "ready", user });
         }
       } catch (error) {
-        if (error instanceof AuthApiRequestError && error.status === 401) {
-          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (isUnauthorizedApiError(error)) {
+          clearStoredAccessToken();
           setRemovedToken(true);
         }
 
@@ -164,7 +174,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
           setCurrentUserState({
             message: getAuthErrorMessage(error),
             status:
-              error instanceof AuthApiRequestError && error.status === 401
+              isUnauthorizedApiError(error)
                 ? "unauthenticated"
                 : "error",
             user: null,
@@ -178,13 +188,13 @@ export function EditBlogClient({ slug }: { slug: string }) {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken]);
+  }, [accessToken, removedToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setFormError({ message: "Log in to edit this blog post." });
       return;
     }
@@ -203,10 +213,8 @@ export function EditBlogClient({ slug }: { slug: string }) {
     const formData = new FormData(event.currentTarget);
 
     try {
-      const { blog } = await updateBlog(
-        slug,
-        getPayload(formData),
-        activeAccessToken,
+      const { blog } = await runWithFreshAccessToken(
+        (accessToken) => updateBlog(slug, getPayload(formData), accessToken),
       );
       router.push(
         blog.status === "published"
@@ -224,7 +232,7 @@ export function EditBlogClient({ slug }: { slug: string }) {
   async function handleDelete() {
     setFormError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setFormError({ message: "Log in to delete this blog post." });
       return;
     }
@@ -249,7 +257,9 @@ export function EditBlogClient({ slug }: { slug: string }) {
     setIsDeleting(true);
 
     try {
-      await deleteBlog(slug, activeAccessToken);
+      await runWithFreshAccessToken((accessToken) =>
+        deleteBlog(slug, accessToken)
+      );
       router.push(routes.blogs);
     } catch (error) {
       handleAuthenticatedError(error);
@@ -260,28 +270,29 @@ export function EditBlogClient({ slug }: { slug: string }) {
   }
 
   function handleAuthenticatedError(error: unknown) {
-    if (error instanceof ApiRequestError && error.status === 401) {
-      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    if (isUnauthorizedApiError(error)) {
+      clearStoredAccessToken();
       setRemovedToken(true);
     }
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#f5f3ff_100%)] px-6 py-6 text-slate-950 sm:px-8 lg:px-10">
+    <main className={ui.pageGradient}>
       <div className="mx-auto max-w-4xl">
         <header className="flex items-center justify-between gap-4">
           <Link
             href={routes.blogs}
-            className="text-xl font-bold tracking-tight text-purpleInk"
+            className={ui.brand}
           >
             MiniBlog
           </Link>
           <nav
             aria-label="Edit blog navigation"
-            className="flex items-center gap-3"
+            className="flex flex-wrap items-center justify-end gap-3"
           >
+            <ThemeToggle />
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+              className={`${ui.secondaryButton} min-h-10 px-4`}
               href={routes.dashboard}
             >
               Dashboard
@@ -291,21 +302,21 @@ export function EditBlogClient({ slug }: { slug: string }) {
 
         <section className="py-12 sm:py-16">
           <div className="mb-8 max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+            <p className={ui.eyebrow}>
               Edit post
             </p>
-            <h1 className="mt-4 text-balance text-4xl font-bold tracking-normal text-slate-950 sm:text-5xl">
+            <h1 className={`mt-4 text-balance text-4xl sm:text-5xl ${ui.title}`}>
               Update a MiniBlog post.
             </h1>
-            <p className="mt-5 text-base leading-8 text-slate-700 sm:text-lg">
+            <p className={`mt-5 text-base leading-8 sm:text-lg ${ui.text}`}>
               Save changes or delete the post with the authenticated MiniBlog
               API.
             </p>
           </div>
 
           <EditBlogContent
-            accessToken={activeAccessToken}
             blogState={blogState}
+            canTrySession={canTrySession}
             currentUserState={currentUserState}
             error={formError}
             isDeleting={isDeleting}
@@ -320,8 +331,8 @@ export function EditBlogClient({ slug }: { slug: string }) {
 }
 
 function EditBlogContent({
-  accessToken,
   blogState,
+  canTrySession,
   currentUserState,
   error,
   isDeleting,
@@ -329,8 +340,8 @@ function EditBlogContent({
   onDelete,
   onSubmit,
 }: {
-  accessToken: string | null;
   blogState: BlogLoadState;
+  canTrySession: boolean;
   currentUserState: CurrentUserState;
   error: FormError | null;
   isDeleting: boolean;
@@ -338,7 +349,7 @@ function EditBlogContent({
   onDelete: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  if (!accessToken) {
+  if (!canTrySession) {
     return (
       <UnauthenticatedState
         error={
@@ -405,7 +416,7 @@ function EditBlogForm({
 
   return (
     <form
-      className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8"
+      className={`p-6 sm:p-8 ${ui.surface}`}
       onSubmit={onSubmit}
     >
       <div className="grid gap-5">
@@ -425,6 +436,13 @@ function EditBlogForm({
           placeholder="A short summary for readers."
           rows={3}
         />
+        <TextField
+          defaultValue={blog.tags.map((tag) => tag.name).join(", ")}
+          error={error?.fields?.tags}
+          label="Tags"
+          name="tags"
+          placeholder="Python, Flask, Notes"
+        />
         <TextAreaField
           defaultValue={blog.content}
           error={error?.fields?.content}
@@ -436,9 +454,9 @@ function EditBlogForm({
         />
         <StatusField defaultValue={blog.status} error={error?.fields?.status} />
         {error ? <FormErrorMessage error={error} /> : null}
-        <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between ${ui.divider}`}>
           <button
-            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-red-200 bg-white px-6 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70"
+            className={`${ui.destructiveButton} min-h-12 px-6`}
             disabled={isBusy}
             onClick={onDelete}
             type="button"
@@ -447,7 +465,7 @@ function EditBlogForm({
           </button>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
             <Link
-              className="inline-flex min-h-12 items-center justify-center rounded-lg border border-purple-200 bg-white px-6 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50"
+              className={`${ui.secondaryButton} min-h-12 px-6`}
               href={
                 blog.status === "published"
                   ? routes.blog(blog.slug)
@@ -457,7 +475,7 @@ function EditBlogForm({
               Cancel
             </Link>
             <button
-              className="inline-flex min-h-12 items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
+              className={`${ui.primaryButton} min-h-12 px-6`}
               disabled={isBusy}
               type="submit"
             >
@@ -472,22 +490,22 @@ function EditBlogForm({
 
 function LoadingState() {
   return (
-    <div className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8">
-      <div className="h-4 w-36 rounded-full bg-purple-100" />
-      <div className="mt-5 h-12 rounded-lg bg-slate-100" />
-      <div className="mt-5 h-24 rounded-lg bg-slate-100" />
-      <div className="mt-5 h-40 rounded-lg bg-slate-100" />
-      <div className="mt-5 h-12 rounded-lg bg-purple-100" />
+    <div className={`p-6 sm:p-8 ${ui.surface}`}>
+      <div className={`h-4 w-36 rounded-full ${ui.skeletonPurple}`} />
+      <div className={`mt-5 h-12 rounded-lg ${ui.skeletonNeutral}`} />
+      <div className={`mt-5 h-24 rounded-lg ${ui.skeletonNeutral}`} />
+      <div className={`mt-5 h-40 rounded-lg ${ui.skeletonNeutral}`} />
+      <div className={`mt-5 h-12 rounded-lg ${ui.skeletonPurple}`} />
     </div>
   );
 }
 
 function UnauthenticatedState({ error }: { error: FormError }) {
   return (
-    <div className="rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8">
+    <div className={`p-6 sm:p-8 ${ui.surface}`}>
       <FormErrorMessage error={error} />
       <Link
-        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-purpleInk px-6 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        className={`mt-6 min-h-12 w-full px-6 ${ui.primaryButton}`}
         href={routes.login}
       >
         Go to login
@@ -498,18 +516,18 @@ function UnauthenticatedState({ error }: { error: FormError }) {
 
 function NotFoundState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-purple-100 bg-white p-8 text-center shadow-2xl shadow-purple-950/10">
-      <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+    <div className={`p-8 text-center ${ui.surface}`}>
+      <p className={ui.eyebrow}>
         Blog not found
       </p>
-      <h2 className="mt-3 text-2xl font-bold tracking-normal text-slate-950">
+      <h2 className={`mt-3 text-2xl ${ui.title}`}>
         This post is not available.
       </h2>
-      <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-slate-700">
+      <p className={`mx-auto mt-3 max-w-lg text-base leading-7 ${ui.text}`}>
         {message}
       </p>
       <Link
-        className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        className={`mt-6 min-h-10 px-4 ${ui.primaryButton}`}
         href={routes.blogs}
       >
         Back to blogs
@@ -520,18 +538,18 @@ function NotFoundState({ message }: { message: string }) {
 
 function ForbiddenState() {
   return (
-    <div className="rounded-xl border border-purple-100 bg-white p-8 text-center shadow-2xl shadow-purple-950/10">
-      <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+    <div className={`p-8 text-center ${ui.surface}`}>
+      <p className={ui.eyebrow}>
         Author access required
       </p>
-      <h2 className="mt-3 text-2xl font-bold tracking-normal text-slate-950">
+      <h2 className={`mt-3 text-2xl ${ui.title}`}>
         You cannot edit this post.
       </h2>
-      <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-slate-700">
+      <p className={`mx-auto mt-3 max-w-lg text-base leading-7 ${ui.text}`}>
         Only the author of this MiniBlog post can edit or delete it.
       </p>
       <Link
-        className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950"
+        className={`mt-6 min-h-10 px-4 ${ui.primaryButton}`}
         href={routes.blogs}
       >
         Back to blogs
@@ -542,7 +560,7 @@ function ForbiddenState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-900 shadow-2xl shadow-red-950/5">
+    <div className={`p-6 ${ui.errorPanel}`}>
       <p className="text-sm font-semibold uppercase tracking-wide">
         Unable to load blog
       </p>
@@ -571,9 +589,9 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
+      <span className={ui.label}>{label}</span>
       <input
-        className="mt-2 min-h-12 w-full rounded-lg border border-purple-100 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+        className={`mt-2 min-h-12 w-full px-4 ${ui.input}`}
         defaultValue={defaultValue}
         name={name}
         placeholder={placeholder}
@@ -581,7 +599,7 @@ function TextField({
         type="text"
       />
       {error ? (
-        <span className="mt-2 block text-sm text-red-700">{error}</span>
+        <span className={ui.fieldError}>{error}</span>
       ) : null}
     </label>
   );
@@ -606,9 +624,9 @@ function TextAreaField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
+      <span className={ui.label}>{label}</span>
       <textarea
-        className="mt-2 w-full resize-y rounded-lg border border-purple-100 bg-white px-4 py-3 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+        className={`mt-2 w-full resize-y px-4 py-3 leading-6 ${ui.input}`}
         defaultValue={defaultValue}
         name={name}
         placeholder={placeholder}
@@ -616,7 +634,7 @@ function TextAreaField({
         rows={rows}
       />
       {error ? (
-        <span className="mt-2 block text-sm text-red-700">{error}</span>
+        <span className={ui.fieldError}>{error}</span>
       ) : null}
     </label>
   );
@@ -631,9 +649,9 @@ function StatusField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-800">Status</span>
+      <span className={ui.label}>Status</span>
       <select
-        className="mt-2 min-h-12 w-full rounded-lg border border-purple-100 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+        className={`mt-2 min-h-12 w-full px-4 ${ui.input}`}
         defaultValue={defaultValue}
         name="status"
       >
@@ -641,7 +659,7 @@ function StatusField({
         <option value="published">Published</option>
       </select>
       {error ? (
-        <span className="mt-2 block text-sm text-red-700">{error}</span>
+        <span className={ui.fieldError}>{error}</span>
       ) : null}
     </label>
   );
@@ -649,30 +667,10 @@ function StatusField({
 
 function FormErrorMessage({ error }: { error: FormError }) {
   return (
-    <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <p className={`px-4 py-3 text-sm ${ui.errorBox}`}>
       {error.message}
     </p>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(
-    subscribeToAccessToken,
-    getAccessTokenSnapshot,
-    () => null,
-  );
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 function getPayload(formData: FormData): UpdateBlogPayload {
@@ -680,6 +678,7 @@ function getPayload(formData: FormData): UpdateBlogPayload {
     content: getFormValue(formData, "content"),
     excerpt: getFormValue(formData, "excerpt").trim() || null,
     status: getStatus(formData),
+    tags: getTags(formData),
     title: getFormValue(formData, "title"),
   };
 }
@@ -694,6 +693,13 @@ function getFormValue(formData: FormData, key: string): string {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+function getTags(formData: FormData): string[] {
+  return getFormValue(formData, "tags")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function isNotFoundError(error: unknown): boolean {

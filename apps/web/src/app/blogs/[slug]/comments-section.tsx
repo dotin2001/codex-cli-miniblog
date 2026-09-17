@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { getMe } from "@/lib/api/auth";
 import {
@@ -13,7 +13,14 @@ import {
   updateComment
 } from "@/lib/api/comments";
 import type { Comment } from "@/lib/api/comments";
+import {
+  clearStoredAccessToken,
+  isUnauthorizedApiError,
+  runWithFreshAccessToken,
+  useAccessToken,
+} from "@/lib/auth-session";
 import { routes } from "@/lib/routes";
+import { ui } from "@/lib/ui-styles";
 
 type CommentLoadState =
   | {
@@ -42,8 +49,6 @@ type EditState = {
   content: string;
 };
 
-const ACCESS_TOKEN_STORAGE_KEY = "miniblog.dev.accessToken";
-
 export function CommentsSection({ slug }: { slug: string }) {
   const accessToken = useAccessToken();
   const [removedToken, setRemovedToken] = useState(false);
@@ -56,7 +61,7 @@ export function CommentsSection({ slug }: { slug: string }) {
   const [actionError, setActionError] = useState<CommentActionError | null>(null);
   const [savingCommentId, setSavingCommentId] = useState<number | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
-  const activeAccessToken = removedToken ? null : accessToken;
+  const canTrySession = !removedToken;
 
   useEffect(() => {
     let isMounted = true;
@@ -91,20 +96,22 @@ export function CommentsSection({ slug }: { slug: string }) {
     let isMounted = true;
 
     async function loadCurrentUser() {
-      if (!activeAccessToken) {
+      if (removedToken) {
         setCurrentUserId(null);
         return;
       }
 
       try {
-        const { user } = await getMe(activeAccessToken);
+        const { user } = await runWithFreshAccessToken((accessToken) =>
+          getMe(accessToken)
+        );
 
         if (isMounted) {
           setCurrentUserId(user.id);
         }
       } catch (error) {
-        if (error instanceof ApiRequestError && error.status === 401) {
-          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (isUnauthorizedApiError(error)) {
+          clearStoredAccessToken();
           setRemovedToken(true);
         }
 
@@ -119,13 +126,13 @@ export function CommentsSection({ slug }: { slug: string }) {
     return () => {
       isMounted = false;
     };
-  }, [activeAccessToken]);
+  }, [accessToken, removedToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setFormError({ message: "Log in to add a comment." });
       return;
     }
@@ -141,10 +148,8 @@ export function CommentsSection({ slug }: { slug: string }) {
     setIsSubmitting(true);
 
     try {
-      const { comment } = await createComment(
-        slug,
-        { content },
-        activeAccessToken
+      const { comment } = await runWithFreshAccessToken(
+        (accessToken) => createComment(slug, { content }, accessToken)
       );
 
       setContent("");
@@ -162,8 +167,8 @@ export function CommentsSection({ slug }: { slug: string }) {
         };
       });
     } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      if (isUnauthorizedApiError(error)) {
+        clearStoredAccessToken();
         setRemovedToken(true);
       }
 
@@ -176,7 +181,7 @@ export function CommentsSection({ slug }: { slug: string }) {
   async function handleSaveComment(commentId: number) {
     setActionError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setActionError({
         commentId,
         message: "Log in to edit this comment."
@@ -200,10 +205,9 @@ export function CommentsSection({ slug }: { slug: string }) {
     setSavingCommentId(commentId);
 
     try {
-      const { comment } = await updateComment(
-        commentId,
-        { content: editState.content },
-        activeAccessToken
+      const { comment } = await runWithFreshAccessToken(
+        (accessToken) =>
+          updateComment(commentId, { content: editState.content }, accessToken)
       );
 
       setState((currentState) => {
@@ -233,7 +237,7 @@ export function CommentsSection({ slug }: { slug: string }) {
   async function handleDeleteComment(commentId: number) {
     setActionError(null);
 
-    if (!activeAccessToken) {
+    if (removedToken) {
       setActionError({
         commentId,
         message: "Log in to delete this comment."
@@ -252,7 +256,9 @@ export function CommentsSection({ slug }: { slug: string }) {
     setDeletingCommentId(commentId);
 
     try {
-      await deleteComment(commentId, activeAccessToken);
+      await runWithFreshAccessToken((accessToken) =>
+        deleteComment(commentId, accessToken)
+      );
 
       setState((currentState) => {
         if (currentState.status !== "success") {
@@ -286,8 +292,8 @@ export function CommentsSection({ slug }: { slug: string }) {
     error: unknown,
     fallbackMessage: string
   ) {
-    if (error instanceof ApiRequestError && error.status === 401) {
-      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    if (isUnauthorizedApiError(error)) {
+      clearStoredAccessToken();
       setRemovedToken(true);
     }
 
@@ -298,18 +304,18 @@ export function CommentsSection({ slug }: { slug: string }) {
   }
 
   return (
-    <section className="mt-8 rounded-xl border border-purple-100 bg-white p-6 shadow-2xl shadow-purple-950/10 sm:p-8">
+    <section className={`mt-8 p-6 sm:p-8 ${ui.surface}`}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-purpleInk">
+          <p className={ui.eyebrow}>
             Comments
           </p>
-          <h2 className="mt-2 text-2xl font-bold tracking-normal text-slate-950">
+          <h2 className={`mt-2 text-2xl ${ui.title}`}>
             Join the conversation
           </h2>
         </div>
         {state.status === "success" ? (
-          <p className="text-sm font-semibold text-slate-600">
+          <p className={`text-sm font-semibold ${ui.muted}`}>
             {state.comments.length}{" "}
             {state.comments.length === 1 ? "comment" : "comments"}
           </p>
@@ -318,7 +324,7 @@ export function CommentsSection({ slug }: { slug: string }) {
 
       <div className="mt-6">
         <CommentForm
-          accessToken={activeAccessToken}
+          canTrySession={canTrySession}
           content={content}
           error={formError}
           isSubmitting={isSubmitting}
@@ -365,26 +371,26 @@ export function CommentsSection({ slug }: { slug: string }) {
 }
 
 function CommentForm({
-  accessToken,
+  canTrySession,
   content,
   error,
   isSubmitting,
   onChange,
   onSubmit
 }: {
-  accessToken: string | null;
+  canTrySession: boolean;
   content: string;
   error: FormError | null;
   isSubmitting: boolean;
   onChange: (content: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  if (!accessToken) {
+  if (!canTrySession) {
     return (
-      <div className="rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 text-sm text-slate-700">
+      <div className={`px-4 py-3 text-sm ${ui.softSurface}`}>
         <span>Log in to add your comment.</span>{" "}
         <Link
-          className="font-semibold text-purpleInk transition hover:text-purple-950"
+          className="font-semibold text-purpleInk transition hover:text-purple-950 dark:text-purple-200 dark:hover:text-purple-100"
           href={routes.login}
         >
           Go to login
@@ -396,9 +402,9 @@ function CommentForm({
   return (
     <form className="grid gap-3" onSubmit={onSubmit}>
       <label className="block">
-        <span className="text-sm font-semibold text-slate-800">Add a comment</span>
+        <span className={ui.label}>Add a comment</span>
         <textarea
-          className="mt-2 min-h-28 w-full resize-y rounded-lg border border-purple-100 bg-white px-4 py-3 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+          className={`mt-2 min-h-28 w-full resize-y px-4 py-3 leading-6 ${ui.input}`}
           disabled={isSubmitting}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Share your thoughts..."
@@ -406,7 +412,7 @@ function CommentForm({
           value={content}
         />
         {error?.fields?.content ? (
-          <span className="mt-2 block text-sm text-red-700">
+          <span className={ui.fieldError}>
             {error.fields.content}
           </span>
         ) : null}
@@ -414,7 +420,7 @@ function CommentForm({
       {error ? <FormErrorMessage error={error} /> : null}
       <div className="flex justify-end">
         <button
-          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-purpleInk px-5 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
+          className={`${ui.primaryButton} min-h-11 px-5`}
           disabled={isSubmitting}
           type="submit"
         >
@@ -502,11 +508,11 @@ function CommentItem({
   const isAuthor = currentUserId === comment.authorId;
 
   return (
-    <li className="rounded-lg border border-purple-100 bg-white p-4">
+    <li className="rounded-lg border border-purple-100 bg-white p-4 transition-colors dark:border-purple-300/20 dark:bg-slate-950/70">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold text-slate-600">
+        <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold ${ui.muted}`}>
           <span>{comment.author.name}</span>
-          <span aria-hidden="true" className="text-purple-300">
+          <span aria-hidden="true" className="text-purple-300 dark:text-purple-500">
             /
           </span>
           <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
@@ -514,7 +520,7 @@ function CommentItem({
         {isAuthor ? (
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-purple-200 bg-white px-3 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-70"
+              className={`${ui.secondaryButton} min-h-9 px-3`}
               disabled={isDeleting || isSaving}
               onClick={() => onEdit(comment)}
               type="button"
@@ -522,7 +528,7 @@ function CommentItem({
               Edit
             </button>
             <button
-              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70"
+              className={`${ui.destructiveButton} min-h-9 px-3`}
               disabled={isDeleting || isSaving}
               onClick={() => onDelete(comment.id)}
               type="button"
@@ -538,14 +544,14 @@ function CommentItem({
           <label className="block">
             <span className="sr-only">Edit comment</span>
             <textarea
-              className="w-full resize-y rounded-lg border border-purple-100 bg-white px-4 py-3 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+              className={`w-full resize-y px-4 py-3 leading-6 ${ui.input}`}
               disabled={isSaving || isDeleting}
               onChange={(event) => onChangeEditContent(event.target.value)}
               rows={4}
               value={editState.content}
             />
             {actionError?.fields?.content ? (
-              <span className="mt-2 block text-sm text-red-700">
+              <span className={ui.fieldError}>
                 {actionError.fields.content}
               </span>
             ) : null}
@@ -553,7 +559,7 @@ function CommentItem({
           {actionError ? <FormErrorMessage error={actionError} /> : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-purple-200 bg-white px-4 text-sm font-semibold text-purpleInk transition hover:border-purple-300 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-70"
+              className={`${ui.secondaryButton} min-h-10 px-4`}
               disabled={isSaving || isDeleting}
               onClick={onCancelEdit}
               type="button"
@@ -561,7 +567,7 @@ function CommentItem({
               Cancel
             </button>
             <button
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-purpleInk px-4 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-950 disabled:cursor-not-allowed disabled:opacity-70"
+              className={`${ui.primaryButton} min-h-10 px-4`}
               disabled={isSaving || isDeleting}
               onClick={() => onSave(comment.id)}
               type="button"
@@ -572,7 +578,7 @@ function CommentItem({
         </div>
       ) : (
         <>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-800">
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-800 dark:text-slate-200">
             {comment.content}
           </p>
           {actionError ? <FormErrorMessage error={actionError} /> : null}
@@ -584,7 +590,7 @@ function CommentItem({
 
 function LoadingState() {
   return (
-    <div className="rounded-lg border border-purple-100 bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-600">
+    <div className={`px-4 py-5 text-sm font-semibold ${ui.neutralSurface}`}>
       Loading comments...
     </div>
   );
@@ -592,7 +598,7 @@ function LoadingState() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <div className={`px-4 py-3 text-sm ${ui.errorBox}`}>
       {message}
     </div>
   );
@@ -600,7 +606,7 @@ function ErrorState({ message }: { message: string }) {
 
 function EmptyState() {
   return (
-    <div className="rounded-lg border border-purple-100 bg-slate-50 px-4 py-5 text-sm text-slate-700">
+    <div className={`px-4 py-5 text-sm ${ui.neutralSurface}`}>
       No comments yet. Start the conversation.
     </div>
   );
@@ -608,26 +614,10 @@ function EmptyState() {
 
 function FormErrorMessage({ error }: { error: FormError }) {
   return (
-    <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <p className={`px-4 py-3 text-sm ${ui.errorBox}`}>
       {error.message}
     </p>
   );
-}
-
-function useAccessToken(): string | null {
-  return useSyncExternalStore(subscribeToAccessToken, getAccessTokenSnapshot, () => null);
-}
-
-function subscribeToAccessToken(onStoreChange: () => void): () => void {
-  window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
-}
-
-function getAccessTokenSnapshot(): string | null {
-  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
 
 function toFormError(

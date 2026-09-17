@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 import unittest
 
 import jwt
@@ -7,7 +8,9 @@ from werkzeug.security import generate_password_hash
 from app import create_app
 from app.extensions import db
 from app.models.blog import Blog
+from app.models.tag import Tag
 from app.models.user import User
+from app.routes import blogs as blog_routes
 
 
 class TestConfig:
@@ -83,6 +86,12 @@ class UpdateBlogEndpointTestCase(unittest.TestCase):
         db.session.commit()
         return blog
 
+    def _add_tag(self, name, slug):
+        tag = Tag(name=name, slug=slug)
+        db.session.add(tag)
+        db.session.commit()
+        return tag
+
     def test_update_blog_changes_fields_and_regenerates_unique_slug_for_author(self):
         with self.app.app_context():
             self._add_blog(title="Existing", slug="updated-title")
@@ -152,6 +161,130 @@ class UpdateBlogEndpointTestCase(unittest.TestCase):
         with self.app.app_context():
             updated_blog = db.session.get(Blog, blog_id)
             self.assertEqual(updated_blog.content, "Only content changed.")
+
+    def test_update_blog_replaces_tags_when_tags_are_present(self):
+        with self.app.app_context():
+            original_tag = self._add_tag("Original", "original")
+            blog = self._add_blog(
+                title="Tagged Draft",
+                slug="tagged-draft",
+                content="Original content",
+            )
+            blog.tags = [original_tag]
+            db.session.commit()
+            blog_id = blog.id
+
+        response = self.client.patch(
+            "/blogs/tagged-draft",
+            headers=self._auth_headers(),
+            json={"tags": [" SQL ", "Backend", "sql"]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [
+                {key: tag[key] for key in ("name", "slug")}
+                for tag in response.get_json()["blog"]["tags"]
+            ],
+            [
+                {"name": "Backend", "slug": "backend"},
+                {"name": "SQL", "slug": "sql"},
+            ],
+        )
+
+        with self.app.app_context():
+            updated_blog = db.session.get(Blog, blog_id)
+            self.assertEqual({tag.slug for tag in updated_blog.tags}, {"backend", "sql"})
+
+    def test_update_blog_preserves_tags_when_tags_are_omitted(self):
+        with self.app.app_context():
+            original_tag = self._add_tag("Original", "original")
+            blog = self._add_blog(
+                title="Tagged Draft",
+                slug="tagged-draft",
+                content="Original content",
+            )
+            blog.tags = [original_tag]
+            db.session.commit()
+            blog_id = blog.id
+
+        response = self.client.patch(
+            "/blogs/tagged-draft",
+            headers=self._auth_headers(),
+            json={"content": "Updated content."},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["blog"]["tags"][0]["slug"], "original")
+
+        with self.app.app_context():
+            updated_blog = db.session.get(Blog, blog_id)
+            self.assertEqual([tag.slug for tag in updated_blog.tags], ["original"])
+
+    def test_update_blog_rejects_invalid_tags_without_changing_existing_tags(self):
+        with self.app.app_context():
+            original_tag = self._add_tag("Original", "original")
+            blog = self._add_blog(title="Tagged Draft", slug="tagged-draft")
+            blog.tags = [original_tag]
+            db.session.commit()
+            blog_id = blog.id
+
+        response = self.client.patch(
+            "/blogs/tagged-draft",
+            headers=self._auth_headers(),
+            json={"tags": [""]},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json()["error"]["fields"]["tags"],
+            "Tags cannot include blank names.",
+        )
+
+        with self.app.app_context():
+            unchanged_blog = db.session.get(Blog, blog_id)
+            self.assertEqual([tag.slug for tag in unchanged_blog.tags], ["original"])
+
+    def test_update_blog_retries_late_duplicate_slug_collision(self):
+        with self.app.app_context():
+            self._add_blog(title="Taken Race", slug="race-title")
+            blog = self._add_blog(
+                title="Original Race",
+                slug="original-race",
+                content="Original content",
+            )
+            blog_id = blog.id
+
+        real_unique_slug = blog_routes._unique_slug
+        calls = 0
+
+        def colliding_slug(title, exclude_blog_id=None, rejected_slugs=None):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return "race-title"
+
+            return real_unique_slug(
+                title,
+                exclude_blog_id=exclude_blog_id,
+                rejected_slugs=rejected_slugs,
+            )
+
+        with patch.object(blog_routes, "_unique_slug", side_effect=colliding_slug):
+            response = self.client.patch(
+                "/blogs/original-race",
+                headers=self._auth_headers(),
+                json={"title": "Race Title", "content": "Updated content"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["blog"]["slug"], "race-title-2")
+        self.assertEqual(response.get_json()["blog"]["content"], "Updated content")
+
+        with self.app.app_context():
+            updated_blog = db.session.get(Blog, blog_id)
+            self.assertEqual(updated_blog.slug, "race-title-2")
+            self.assertEqual(updated_blog.content, "Updated content")
 
     def test_update_blog_requires_valid_bearer_token(self):
         response = self.client.patch(

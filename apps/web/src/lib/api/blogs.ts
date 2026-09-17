@@ -17,6 +17,12 @@ export type BlogAuthor = {
   name: string;
 };
 
+export type BlogTag = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
 export type Blog = {
   author?: BlogAuthor;
   authorId: number;
@@ -26,6 +32,7 @@ export type Blog = {
   id: number;
   slug: string;
   status: BlogStatus;
+  tags: BlogTag[];
   title: string;
   updatedAt: string;
 };
@@ -40,6 +47,8 @@ export type Pagination = {
 export type BlogListParams = {
   page?: number;
   perPage?: number;
+  tag?: string;
+  title?: string;
 };
 
 export type BlogListResponse = {
@@ -55,6 +64,7 @@ export type CreateBlogPayload = {
   content: string;
   excerpt?: string;
   status?: BlogStatus;
+  tags?: string[];
   title: string;
 };
 
@@ -62,6 +72,7 @@ export type UpdateBlogPayload = {
   content?: string;
   excerpt?: string | null;
   status?: BlogStatus;
+  tags?: string[];
   title?: string;
 };
 
@@ -143,6 +154,14 @@ function withQuery(path: string, params: BlogListParams): string {
 
   if (params.perPage !== undefined) {
     query.set("perPage", String(params.perPage));
+  }
+
+  if (params.tag) {
+    query.set("tag", params.tag);
+  }
+
+  if (params.title?.trim()) {
+    query.set("title", params.title.trim());
   }
 
   const queryString = query.toString();

@@ -12,7 +12,9 @@ codex-cli-miniblog/
 │   ├── web/      # Next.js frontend
 │   └── api/      # Flask backend
 ├── docs/         # Architecture, API, auth, and database documentation
-├── .codex/       # Project context and agent skills
+├── .codex/       # MiniBlog project context and project-owned skills
+├── .agents/      # Generated OpenSpec workflow skills
+├── openspec/     # OpenSpec changes and specs
 └── README.md
 ```
 
@@ -155,13 +157,16 @@ npm run dev
 
 The frontend runs at `http://localhost:3000`.
 
+The repository includes `.nvmrc` files at the root and in `apps/web` for the Node version used by this project.
+
 ## Implemented Features
 
 - User registration, login, logout, refresh-token cookie issuance, and `GET /auth/me`
 - Public blog list and public blog detail for published posts only
+- Authenticated dashboard list for the current user's draft and published posts
 - Authenticated blog create, update, delete, and author-only draft/published fetch for dashboard editing
 - Comment list/create/update/delete, with author-only edit/delete behavior
-- Frontend routes for home, login, register, dashboard, blog list, blog detail, create blog, and edit blog
+- Frontend routes for home, login, register, dashboard, my blogs, blog list, blog detail, create blog, and edit blog
 - Centralized frontend route helper in `apps/web/src/lib/routes.ts`
 
 ## Verification
@@ -178,6 +183,7 @@ Frontend:
 ```bash
 cd apps/web
 npm run lint
+npm run test
 npm run typecheck
 ```
 
@@ -189,3 +195,10 @@ See:
 - `docs/api-contract.md`
 - `docs/auth-flow.md`
 - `docs/database.md`
+
+Agent and workflow guidance:
+
+- `AGENTS.md`
+- `.codex/project.md`
+- `.codex/skills`
+- `.agents/skills`

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import jwt
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 from sqlalchemy.orm import joinedload
 
+from app.auth import current_user_from_authorization_header
 from app.extensions import db
 from app.models.comment import Comment
 from app.models.user import User
@@ -58,29 +58,6 @@ def _delete_forbidden_error():
     )
 
 
-def _jwt_secret_key() -> str:
-    secret_key = current_app.config.get("JWT_SECRET_KEY")
-    if not secret_key:
-        raise RuntimeError("JWT_SECRET_KEY must be configured.")
-
-    return secret_key
-
-
-def _current_user_from_authorization_header() -> User | None:
-    authorization = request.headers.get("Authorization", "")
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        return None
-
-    try:
-        payload = jwt.decode(parts[1], _jwt_secret_key(), algorithms=["HS256"])
-        user_id = int(payload["sub"])
-    except (KeyError, TypeError, ValueError, jwt.InvalidTokenError):
-        return None
-
-    return db.session.get(User, user_id)
-
-
 def _validate_update_comment_payload(
     payload: Any,
 ) -> tuple[dict[str, str], dict[str, str]]:
@@ -129,7 +106,7 @@ def _comment_by_id(comment_id: int) -> Comment | None:
 
 @comments_bp.patch("/<int:comment_id>")
 def update_comment(comment_id: int):
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 
@@ -157,7 +134,7 @@ def update_comment(comment_id: int):
 
 @comments_bp.delete("/<int:comment_id>")
 def delete_comment(comment_id: int):
-    user = _current_user_from_authorization_header()
+    user = current_user_from_authorization_header()
     if user is None:
         return _authentication_error()
 

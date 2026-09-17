@@ -1,10 +1,16 @@
 import unittest
 
 from app import create_app
-from app.config import normalize_database_url
+from app.config import DEFAULT_LOCAL_DATABASE_URL, normalize_database_url
 
 
 class DatabaseUrlConfigTest(unittest.TestCase):
+    def test_default_local_database_url_uses_compose_host_port(self):
+        self.assertEqual(
+            DEFAULT_LOCAL_DATABASE_URL,
+            "mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3307/miniblog",
+        )
+
     def test_mysql_url_is_normalized_to_pymysql_driver(self):
         url = "mysql://railway_user:secret@roundhouse.proxy.rlwy.net:12345/railway"
 

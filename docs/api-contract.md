@@ -14,7 +14,7 @@ Backend:
 http://127.0.0.1:8080
 ```
 
-Auth, blog, and comment endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
+Auth, current-user, blog, and comment endpoints allow browser requests from the frontend origins configured by `CORS_ORIGINS`. The default local origins are:
 
 ```text
 http://localhost:3000
@@ -408,7 +408,14 @@ Success response:
       "author": {
         "id": 1,
         "name": "Ada Lovelace"
-      }
+      },
+      "tags": [
+        {
+          "id": 1,
+          "name": "Python",
+          "slug": "python"
+        }
+      ]
     }
   ],
   "pagination": {
@@ -461,6 +468,11 @@ Query parameters:
 - `page` is optional and defaults to `1`.
 - `perPage` is optional and defaults to `10`.
 - `perPage` is capped at `50`.
+- `tag` is optional. When provided, it is interpreted as a tag slug and only published blogs associated with that tag are returned.
+- `title` is optional. When provided, it is trimmed and matched case-insensitively against published blog titles as a partial text search. Blank values are ignored.
+
+When `tag` and `title` are both provided, both filters apply. Pagination totals
+reflect the fully filtered published blog result set.
 
 Success response:
 
@@ -480,7 +492,14 @@ Success response:
       "author": {
         "id": 1,
         "name": "Ada Lovelace"
-      }
+      },
+      "tags": [
+        {
+          "id": 1,
+          "name": "Python",
+          "slug": "python"
+        }
+      ]
     }
   ],
   "pagination": {
@@ -502,6 +521,24 @@ Example:
 
 ```bash
 curl "http://127.0.0.1:8080/blogs?page=1&perPage=10"
+```
+
+Tag-filtered example:
+
+```bash
+curl "http://127.0.0.1:8080/blogs?tag=python&page=1&perPage=10"
+```
+
+Title-search example:
+
+```bash
+curl "http://127.0.0.1:8080/blogs?title=flask&page=1&perPage=10"
+```
+
+Combined tag and title example:
+
+```bash
+curl "http://127.0.0.1:8080/blogs?tag=python&title=testing&page=1&perPage=10"
 ```
 
 ### GET /blogs/:slug
@@ -527,7 +564,14 @@ Success response:
     "author": {
       "id": 1,
       "name": "Ada Lovelace"
-    }
+    },
+    "tags": [
+      {
+        "id": 1,
+        "name": "Python",
+        "slug": "python"
+      }
+    ]
   }
 }
 ```
@@ -590,7 +634,14 @@ Success response:
     "status": "draft",
     "authorId": 1,
     "createdAt": "2026-07-13T10:00:00",
-    "updatedAt": "2026-07-13T10:00:00"
+    "updatedAt": "2026-07-13T10:00:00",
+    "tags": [
+      {
+        "id": 1,
+        "name": "Drafting",
+        "slug": "drafting"
+      }
+    ]
   }
 }
 ```
@@ -1055,7 +1106,7 @@ curl -X DELETE http://127.0.0.1:8080/comments/1 \
 
 ### POST /blogs
 
-Creates a blog post for the current authenticated user. This endpoint only creates blog records; likes, categories, and tags are not implemented yet.
+Creates a blog post for the current authenticated user. This endpoint creates the blog record and optionally associates reusable tags with it. Likes and categories are not implemented yet.
 
 Headers:
 
@@ -1070,7 +1121,8 @@ Request body:
   "title": "My First Post!",
   "excerpt": "A short summary.",
   "content": "Hello from MiniBlog.",
-  "status": "published"
+  "status": "published",
+  "tags": ["Python", "Flask"]
 }
 ```
 
@@ -1081,7 +1133,15 @@ Validation:
 - `excerpt` is optional, trimmed before storage, stored as `null` when omitted or blank, and must be 500 characters or fewer.
 - `status` is optional and defaults to `draft`.
 - `status` must be `draft` or `published` when provided.
+- `tags` is optional and defaults to no tags.
+- `tags` must be an array of strings when provided.
+- Each tag name is trimmed before storage and must not be blank.
+- Each tag name must be 40 characters or fewer and include letters or numbers so a tag slug can be generated.
+- Duplicate equivalent tag names in the same request are de-duplicated by generated slug.
+- A blog can have at most 10 distinct tags.
+- Existing tags are reused when an equivalent tag slug already exists; missing tags are created before being associated with the blog.
 - `slug` is generated from `title` and made unique by appending a numeric suffix when needed.
+- Late duplicate slug collisions during persistence are retried with the next available suffix.
 - `authorId` is set from the authenticated user and cannot be supplied by the client.
 
 Success response:
@@ -1097,7 +1157,19 @@ Success response:
     "status": "published",
     "authorId": 1,
     "createdAt": "2026-07-13T10:00:00",
-    "updatedAt": "2026-07-13T10:00:00"
+    "updatedAt": "2026-07-13T10:00:00",
+    "tags": [
+      {
+        "id": 2,
+        "name": "Flask",
+        "slug": "flask"
+      },
+      {
+        "id": 1,
+        "name": "Python",
+        "slug": "python"
+      }
+    ]
   }
 }
 ```
@@ -1118,7 +1190,8 @@ Validation error response:
     "fields": {
       "title": "Title is required.",
       "content": "Content is required.",
-      "status": "Status must be draft or published."
+      "status": "Status must be draft or published.",
+      "tags": "Tags must be an array of strings."
     }
   }
 }
@@ -1149,13 +1222,32 @@ Status code:
 
 The authentication error response is returned when the `Authorization` header is missing, malformed, uses an invalid token, uses an expired token, or references a user that no longer exists.
 
+Slug conflict response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_SLUG_CONFLICT",
+    "message": "Could not allocate a unique blog slug. Please try a different title."
+  }
+}
+```
+
+Status code:
+
+```text
+409 Conflict
+```
+
+The slug conflict response is returned only if repeated late duplicate slug collisions prevent the backend from allocating a unique generated slug after bounded retries.
+
 Example:
 
 ```bash
 curl -X POST http://127.0.0.1:8080/blogs \
   -H "Authorization: Bearer <accessToken>" \
   -H "Content-Type: application/json" \
-  -d '{"title":"My First Post!","content":"Hello from MiniBlog.","status":"draft"}'
+  -d '{"title":"My First Post!","content":"Hello from MiniBlog.","status":"draft","tags":["Python","Flask"]}'
 ```
 
 ### PATCH /blogs/:slug
@@ -1175,7 +1267,8 @@ Request body:
   "title": "Updated Post Title",
   "excerpt": "Updated summary.",
   "content": "Updated blog content.",
-  "status": "published"
+  "status": "published",
+  "tags": ["SQL", "Backend"]
 }
 ```
 
@@ -1185,9 +1278,12 @@ Validation:
 - `title`, when provided, is trimmed before storage, must not be blank, must be 255 characters or fewer, and must contain letters or numbers so a slug can be generated.
 - The blog `slug` is regenerated only when `title` changes.
 - Regenerated slugs are made unique by appending a numeric suffix when needed.
+- Late duplicate slug collisions during persistence are retried with the next available suffix.
 - `content`, when provided, is trimmed before storage and must not be blank.
 - `excerpt`, when provided, is trimmed before storage, stored as `null` when blank or `null`, and must be 500 characters or fewer.
 - `status`, when provided, must be `draft` or `published`.
+- `tags`, when provided, must follow the same validation rules as `POST /blogs` and replaces the blog's existing tag associations with the validated distinct tags.
+- Existing tag associations remain unchanged when `tags` is omitted.
 - `authorId` cannot be changed by the client.
 
 Success response:
@@ -1203,7 +1299,19 @@ Success response:
     "status": "published",
     "authorId": 1,
     "createdAt": "2026-07-13T10:00:00",
-    "updatedAt": "2026-07-14T10:00:00"
+    "updatedAt": "2026-07-14T10:00:00",
+    "tags": [
+      {
+        "id": 4,
+        "name": "Backend",
+        "slug": "backend"
+      },
+      {
+        "id": 3,
+        "name": "SQL",
+        "slug": "sql"
+      }
+    ]
   }
 }
 ```
@@ -1224,7 +1332,8 @@ Validation error response:
     "fields": {
       "title": "Title cannot be blank.",
       "content": "Content cannot be blank.",
-      "status": "Status must be draft or published."
+      "status": "Status must be draft or published.",
+      "tags": "A blog can have at most 10 tags."
     }
   }
 }
@@ -1287,13 +1396,32 @@ Status code:
 404 Not Found
 ```
 
+Slug conflict response:
+
+```json
+{
+  "error": {
+    "code": "BLOG_SLUG_CONFLICT",
+    "message": "Could not allocate a unique blog slug. Please try a different title."
+  }
+}
+```
+
+Status code:
+
+```text
+409 Conflict
+```
+
+The slug conflict response is returned only if repeated late duplicate slug collisions prevent the backend from allocating a unique regenerated slug after bounded retries.
+
 Example:
 
 ```bash
 curl -X PATCH http://127.0.0.1:8080/blogs/my-first-post \
   -H "Authorization: Bearer <accessToken>" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Updated Post Title","status":"published"}'
+  -d '{"title":"Updated Post Title","status":"published","tags":["SQL","Backend"]}'
 ```
 
 ### DELETE /blogs/:slug
@@ -1420,6 +1548,8 @@ Planned endpoints may include:
 Current status:
 
 - `GET /blogs` is implemented and returns published blogs with pagination.
+- `GET /blogs?tag=<tag-slug>` is implemented and returns published blogs associated with the tag.
+- `GET /blogs?title=<query>` is implemented and returns published blogs with titles that case-insensitively contain the trimmed query.
 - `GET /blogs/:slug` is implemented and returns one published blog by slug.
 - `GET /blogs/:slug/mine` is implemented and only allows the blog author to fetch their own draft or published blog.
 - `GET /me/blogs` is implemented and returns the current authenticated user's draft and published blogs with pagination.

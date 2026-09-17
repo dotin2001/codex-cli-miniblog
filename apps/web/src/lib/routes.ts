@@ -4,6 +4,7 @@ export const routes = {
   register: "/register",
   dashboard: "/dashboard",
   blogs: "/blogs",
+  blogsByTag: (slug: string) => `/blogs?tag=${encodeURIComponent(slug)}`,
   blog: (slug: string) => `/blogs/${slug}`,
   myBlogs: "/dashboard/blogs",
   createBlog: "/dashboard/blogs/new",

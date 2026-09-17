@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 import unittest
 
 import jwt
@@ -7,7 +8,9 @@ from werkzeug.security import generate_password_hash
 from app import create_app
 from app.extensions import db
 from app.models.blog import Blog
+from app.models.tag import Tag
 from app.models.user import User
+from app.routes import blogs as blog_routes
 
 
 class TestConfig:
@@ -95,6 +98,41 @@ class CreateBlogEndpointTestCase(unittest.TestCase):
             self.assertEqual(blog.author_id, 1)
             self.assertEqual(blog.slug, "my-first-post")
 
+    def test_create_blog_creates_and_reuses_tags(self):
+        with self.app.app_context():
+            existing_tag = Tag(name="Python", slug="python")
+            db.session.add(existing_tag)
+            db.session.commit()
+            existing_tag_id = existing_tag.id
+
+        response = self.client.post(
+            "/blogs",
+            headers=self._auth_headers(),
+            json={
+                "title": "Tagged Post",
+                "content": "Tagged content.",
+                "tags": [" Python ", "Flask", "python"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            [
+                {key: tag[key] for key in ("name", "slug")}
+                for tag in response.get_json()["blog"]["tags"]
+            ],
+            [
+                {"name": "Flask", "slug": "flask"},
+                {"name": "Python", "slug": "python"},
+            ],
+        )
+
+        with self.app.app_context():
+            blog = Blog.query.filter_by(slug="tagged-post").one()
+            self.assertEqual({tag.slug for tag in blog.tags}, {"python", "flask"})
+            self.assertEqual(Tag.query.filter_by(slug="python").one().id, existing_tag_id)
+            self.assertEqual(Tag.query.count(), 2)
+
     def test_create_blog_defaults_to_draft_and_generates_unique_slug(self):
         with self.app.app_context():
             db.session.add(
@@ -117,6 +155,47 @@ class CreateBlogEndpointTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()["blog"]["slug"], "same-title-2")
         self.assertEqual(response.get_json()["blog"]["status"], "draft")
         self.assertIsNone(response.get_json()["blog"]["excerpt"])
+        self.assertEqual(response.get_json()["blog"]["tags"], [])
+
+    def test_create_blog_retries_late_duplicate_slug_collision(self):
+        with self.app.app_context():
+            db.session.add(
+                Blog(
+                    title="Race Title",
+                    slug="race-title",
+                    content="Existing content",
+                    author_id=1,
+                )
+            )
+            db.session.commit()
+
+        real_unique_slug = blog_routes._unique_slug
+        calls = 0
+
+        def colliding_slug(title, exclude_blog_id=None, rejected_slugs=None):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return "race-title"
+
+            return real_unique_slug(
+                title,
+                exclude_blog_id=exclude_blog_id,
+                rejected_slugs=rejected_slugs,
+            )
+
+        with patch.object(blog_routes, "_unique_slug", side_effect=colliding_slug):
+            response = self.client.post(
+                "/blogs",
+                headers=self._auth_headers(),
+                json={"title": "Race Title", "content": "New content"},
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()["blog"]["slug"], "race-title-2")
+
+        with self.app.app_context():
+            self.assertEqual(Blog.query.filter_by(slug="race-title-2").count(), 1)
 
     def test_create_blog_requires_valid_bearer_token(self):
         response = self.client.post(
@@ -157,6 +236,56 @@ class CreateBlogEndpointTestCase(unittest.TestCase):
                 }
             },
         )
+
+    def test_create_blog_rejects_invalid_tags(self):
+        cases = [
+            (
+                {"tags": "python"},
+                "Tags must be an array of strings.",
+            ),
+            (
+                {"tags": None},
+                "Tags must be an array of strings.",
+            ),
+            (
+                {"tags": [""]},
+                "Tags cannot include blank names.",
+            ),
+            (
+                {"tags": [123]},
+                "Tags must be an array of strings.",
+            ),
+            (
+                {"tags": ["x" * 41]},
+                "Each tag must be 40 characters or fewer.",
+            ),
+            (
+                {"tags": ["!!!"]},
+                "Tags must include letters or numbers.",
+            ),
+            (
+                {"tags": [f"tag-{index}" for index in range(11)]},
+                "A blog can have at most 10 tags.",
+            ),
+        ]
+
+        for extra_payload, expected_error in cases:
+            with self.subTest(expected_error=expected_error):
+                response = self.client.post(
+                    "/blogs",
+                    headers=self._auth_headers(),
+                    json={
+                        "title": "Tagged Validation",
+                        "content": "Tagged content.",
+                        **extra_payload,
+                    },
+                )
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.get_json()["error"]["fields"]["tags"],
+                    expected_error,
+                )
 
 
 if __name__ == "__main__":

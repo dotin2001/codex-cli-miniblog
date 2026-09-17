@@ -11,6 +11,9 @@ UNSAFE_JWT_SECRET_KEYS = {
     "secret",
     "test-jwt-secret",
 }
+DEFAULT_LOCAL_DATABASE_URL = (
+    "mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3307/miniblog"
+)
 
 
 def _parse_cors_origins(value: str | None) -> list[str]:
@@ -73,7 +76,7 @@ class Config:
         normalize_database_url(
             os.getenv("DATABASE_URL")
             or os.getenv("SQLALCHEMY_DATABASE_URI")
-            or "mysql+pymysql://miniblog:miniblog_password@127.0.0.1:3306/miniblog"
+            or DEFAULT_LOCAL_DATABASE_URL
         )
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False

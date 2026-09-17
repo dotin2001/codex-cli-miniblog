@@ -47,6 +47,8 @@ Browser clients must send auth requests from an allowed `CORS_ORIGINS` origin an
 4. Backend reads the user id from the `sub` claim and loads the user from the database.
 5. Backend returns a new access-token JWT.
 
+The frontend uses the refresh endpoint through `apps/web/src/lib/auth-session.ts`. Protected frontend actions read the development access token from `localStorage`, call the API with `Authorization: Bearer <accessToken>`, and retry once with a newly refreshed access token when a protected request returns `401 Unauthorized`.
+
 Missing, invalid, expired, non-refresh, or unknown-user refresh tokens return:
 
 ```json
@@ -86,3 +88,5 @@ The backend verifies the token signature with `JWT_SECRET_KEY`, verifies token e
 `POST /auth/logout` clears the refresh-token cookie.
 
 Logout does not revoke already issued access tokens or database-backed refresh-token state yet.
+
+The frontend clears the development access token from `localStorage` after logout.

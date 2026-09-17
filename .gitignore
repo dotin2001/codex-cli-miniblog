@@ -3,3 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+cookies.txt
+*.cookies.txt
+/scripts/test-codex-*.js
