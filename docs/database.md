@@ -196,6 +196,8 @@ mysql://
 
 The backend uses SQLAlchemy with PyMySQL, so it normalizes only the database URL scheme. A `DATABASE_URL` that starts with `mysql://` is converted to `mysql+pymysql://` automatically. A `DATABASE_URL` that already starts with `mysql+pymysql://` is used unchanged. The normalization does not depend on `MINIBLOG_ENV` and does not assume a hostname, port, or database name.
 
+The backend startup command is `sh ./start-api.sh`. It runs `flask --app app db upgrade` with retries before starting Gunicorn, so Railway deploys apply pending migrations before serving requests. If Railway has a custom Start Command, set it to `sh ./start-api.sh`; starting Gunicorn directly bypasses migrations and can leave new tables such as `blog_tags` missing.
+
 The Compose API service also sets `MINIBLOG_ENV=production`; keep a strong non-placeholder `JWT_SECRET_KEY` in `.env` before starting that container.
 
 ## Backend Setup
@@ -250,7 +252,7 @@ set +a
 flask --app app db upgrade
 ```
 
-The API container applies pending migrations before Gunicorn starts. For one-off local migration checks in the API container, run from the project root:
+The API startup script applies pending migrations before Gunicorn starts. For one-off local migration checks in the API container, run from the project root:
 
 ```bash
 docker compose run --rm api flask --app app db upgrade

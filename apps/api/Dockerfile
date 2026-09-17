@@ -10,7 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY migrations ./migrations
+COPY start-api.sh ./start-api.sh
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "flask --app app db upgrade && exec gunicorn --bind 0.0.0.0:8080 --workers 2 --access-logfile - --error-logfile - 'app:create_app()'"]
+CMD ["sh", "./start-api.sh"]
