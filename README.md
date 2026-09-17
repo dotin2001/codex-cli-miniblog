@@ -120,7 +120,7 @@ set +a
 flask --app app db upgrade
 ```
 
-For the API container, run migrations separately after MySQL is running:
+For one-off local migration checks in the API container, run:
 
 ```bash
 docker compose run --rm api flask --app app db upgrade
@@ -139,7 +139,7 @@ docker compose build api
 docker compose up api
 ```
 
-The API container runs the Flask app with Gunicorn. It does not run migrations automatically.
+The API container applies pending Flask-Migrate migrations, then runs the Flask app with Gunicorn.
 
 Health check:
 
