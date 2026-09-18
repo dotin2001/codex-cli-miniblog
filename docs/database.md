@@ -196,7 +196,7 @@ mysql://
 
 The backend uses SQLAlchemy with PyMySQL, so it normalizes only the database URL scheme. A `DATABASE_URL` that starts with `mysql://` is converted to `mysql+pymysql://` automatically. A `DATABASE_URL` that already starts with `mysql+pymysql://` is used unchanged. The normalization does not depend on `MINIBLOG_ENV` and does not assume a hostname, port, or database name.
 
-Railway API deployments use the repository root `Dockerfile`, which packages `apps/api` and starts with `sh ./start-api.sh`. The startup script runs `flask --app app db upgrade` with retries before starting Gunicorn, so Railway deploys apply pending migrations before serving requests. If Railway has a custom Start Command, set it to `sh ./start-api.sh`; starting Gunicorn directly bypasses migrations and can leave new tables such as `blog_tags` missing.
+Railway API deployments use the repository root `Dockerfile`, which packages `apps/api` and declares `ENTRYPOINT ["sh", "./start-api.sh"]`. The entrypoint runs `flask --app app db upgrade` with retries before starting Gunicorn, so Railway deploys apply pending migrations before serving requests. If Railway logs show `Starting gunicorn` without preceding `Running database migrations...` lines, clear any custom Start Command or entrypoint override that starts Gunicorn directly, then redeploy the current image.
 
 In production-like environments, the Flask app also verifies schema readiness during normal worker startup before registering routes. The readiness gate checks that migration-owned tables required by current API routes exist: `users`, `blogs`, `comments`, `tags`, and `blog_tags`. It does not create or modify tables. If a required table is missing, startup fails with an error like:
 
@@ -214,7 +214,7 @@ If Railway logs show an error such as:
 pymysql.err.ProgrammingError: (1146, "Table 'railway.blog_tags' doesn't exist")
 ```
 
-while handling `GET /blogs`, the deployed API code is newer than the connected
+while handling `GET /blogs` or `GET /me/blogs`, the deployed API code is newer than the connected
 database schema. Blog list queries eager-load `Blog.tags` through the
 `blog_tags` association table, so a missing table means the pending migrations
 that create or repair `tags` and `blog_tags` have not been applied to that
@@ -223,17 +223,19 @@ database before traffic reached Gunicorn.
 Check the Railway service configuration first:
 
 - Confirm the service uses the repository root `Dockerfile`.
-- Confirm the Railway Start Command is `sh ./start-api.sh`, or remove any
-  custom command that starts Gunicorn directly.
+- Clear any custom Railway Start Command or entrypoint override that starts
+  Gunicorn directly; the image entrypoint should run `sh ./start-api.sh`.
 - Redeploy the current image after fixing the start command.
-- Confirm deployment logs show migration startup before Gunicorn, including:
+- Confirm deployment logs show migration startup before Gunicorn. If the logs
+  start at `Starting gunicorn` with no migration lines, Railway is still
+  bypassing the wrapper or running an older image. Healthy startup includes:
 
 ```text
 Running database migrations before API start, attempt 1/12...
 Database migrations are up to date.
 ```
 
-- Confirm Gunicorn does not start if the app reports `Database schema is not ready...`; that failure means the connected database still needs pending migrations applied.
+- Confirm Gunicorn does not start if the app reports `Database schema is not ready...`; that failure after migration attempts means the connected database still needs repair.
 
 If the table is still missing, run `flask --app app db upgrade` against the same
 Railway MySQL database used by the API service, or use a Railway one-off command
@@ -297,7 +299,7 @@ set +a
 flask --app app db upgrade
 ```
 
-The API startup script applies pending migrations before Gunicorn starts. For one-off local migration checks in the API container, run from the project root:
+The API startup entrypoint applies pending migrations before Gunicorn starts. For one-off local migration checks in the API container, run from the project root:
 
 ```bash
 docker compose run --rm api flask --app app db upgrade
