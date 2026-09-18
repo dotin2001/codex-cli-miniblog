@@ -45,6 +45,10 @@ def _runtime_env_name(config: dict) -> str:
     return str(value).strip().lower()
 
 
+def is_production_like_environment(config: dict) -> bool:
+    return _runtime_env_name(config) in PRODUCTION_ENV_NAMES
+
+
 def _is_unsafe_jwt_secret(value: object) -> bool:
     secret = str(value or "").strip()
     return len(secret) < 32 or secret.lower() in UNSAFE_JWT_SECRET_KEYS
@@ -54,7 +58,7 @@ def validate_runtime_config(config: dict) -> None:
     if config.get("TESTING"):
         return
 
-    if _runtime_env_name(config) not in PRODUCTION_ENV_NAMES:
+    if not is_production_like_environment(config):
         return
 
     if _is_unsafe_jwt_secret(config.get("JWT_SECRET_KEY")):
