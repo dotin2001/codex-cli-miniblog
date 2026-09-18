@@ -1,7 +1,32 @@
+import tempfile
 import unittest
+from pathlib import Path
+
+import sqlalchemy as sa
 
 from app import create_app
 from app.config import DEFAULT_LOCAL_DATABASE_URL, normalize_database_url
+from app.schema_readiness import REQUIRED_SCHEMA_TABLES
+
+
+_TEMP_DIRECTORIES: list[tempfile.TemporaryDirectory] = []
+
+
+def _sqlite_uri_with_required_tables() -> str:
+    directory = tempfile.TemporaryDirectory()
+    db_path = Path(directory.name) / "production-config.sqlite"
+    uri = f"sqlite:///{db_path}"
+    engine = sa.create_engine(uri)
+
+    with engine.begin() as connection:
+        for table_name in sorted(REQUIRED_SCHEMA_TABLES):
+            connection.exec_driver_sql(
+                f"CREATE TABLE {table_name} (id INTEGER PRIMARY KEY)"
+            )
+
+    engine.dispose()
+    _TEMP_DIRECTORIES.append(directory)
+    return uri
 
 
 class DatabaseUrlConfigTest(unittest.TestCase):
@@ -84,9 +109,11 @@ class ProductionJwtSecretValidationTest(unittest.TestCase):
             create_app(TestConfig)
 
     def test_production_allows_strong_jwt_secret(self):
+        uri = _sqlite_uri_with_required_tables()
+
         class TestConfig:
             MINIBLOG_ENV = "production"
-            SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+            SQLALCHEMY_DATABASE_URI = uri
             JWT_SECRET_KEY = "a-local-test-value-that-is-long-enough"
 
         app = create_app(TestConfig)

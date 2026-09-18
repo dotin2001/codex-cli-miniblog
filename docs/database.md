@@ -198,6 +198,14 @@ The backend uses SQLAlchemy with PyMySQL, so it normalizes only the database URL
 
 Railway API deployments use the repository root `Dockerfile`, which packages `apps/api` and starts with `sh ./start-api.sh`. The startup script runs `flask --app app db upgrade` with retries before starting Gunicorn, so Railway deploys apply pending migrations before serving requests. If Railway has a custom Start Command, set it to `sh ./start-api.sh`; starting Gunicorn directly bypasses migrations and can leave new tables such as `blog_tags` missing.
 
+In production-like environments, the Flask app also verifies schema readiness during normal worker startup before registering routes. The readiness gate checks that migration-owned tables required by current API routes exist: `users`, `blogs`, `comments`, `tags`, and `blog_tags`. It does not create or modify tables. If a required table is missing, startup fails with an error like:
+
+```text
+Database schema is not ready. Missing required table(s): blog_tags. Run `flask --app app db upgrade` before starting the API.
+```
+
+The readiness gate is skipped for Flask-Migrate `flask --app app db ...` commands so migrations remain the repair path, and skipped for test configuration so SQLite-backed unit tests can create isolated schemas.
+
 ### Diagnosing Missing `blog_tags` On Railway
 
 If Railway logs show an error such as:
@@ -224,6 +232,8 @@ Check the Railway service configuration first:
 Running database migrations before API start, attempt 1/12...
 Database migrations are up to date.
 ```
+
+- Confirm Gunicorn does not start if the app reports `Database schema is not ready...`; that failure means the connected database still needs pending migrations applied.
 
 If the table is still missing, run `flask --app app db upgrade` against the same
 Railway MySQL database used by the API service, or use a Railway one-off command

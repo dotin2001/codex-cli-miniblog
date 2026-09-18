@@ -6,6 +6,10 @@ from app.routes.auth import auth_bp
 from app.routes.blogs import blogs_bp, me_bp
 from app.routes.comments import comments_bp
 from app.routes.health import health_bp
+from app.schema_readiness import (
+    should_check_schema_readiness,
+    verify_required_schema_tables,
+)
 
 
 def create_app(config_object: type[Config] | None = None) -> Flask:
@@ -39,6 +43,10 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
     from app import models  # noqa: F401
 
     migrate.init_app(app, db)
+
+    if should_check_schema_readiness(app.config):
+        with app.app_context():
+            verify_required_schema_tables(db.engine)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(blogs_bp)
