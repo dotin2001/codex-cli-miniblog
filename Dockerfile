@@ -14,4 +14,4 @@ COPY apps/api/start-api.sh ./start-api.sh
 
 EXPOSE 8080
 
-CMD ["sh", "./start-api.sh"]
+ENTRYPOINT ["sh", "./start-api.sh"]
